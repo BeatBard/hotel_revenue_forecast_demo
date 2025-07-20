@@ -18,15 +18,14 @@ import sys
 import os
 import base64
 import io
-import json
 from datetime import datetime
 
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy import stats
-from scipy.stats import pearsonr, spearmanr
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import r2_score, mean_absolute_error
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -266,6 +265,143 @@ def demonstrate_leakage_prevention():
         return jsonify(leakage_demo)
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/feature-engineering/feature-importance', methods=['GET'])
+def analyze_feature_importance_for_revenue():
+    """Analyze feature importance for predicting CheckTotal using real data"""
+    try:
+        logger.info("🎯 Starting feature importance analysis for CheckTotal prediction...")
+        
+        # Load all revenue center data
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        logger.info(f"   📊 Loaded {df.shape[0]} records from all revenue centers")
+        
+        # Prepare features for importance analysis
+        
+        # Create a copy for feature engineering
+        feature_df = df.copy()
+        
+        # Remove target column and non-predictive columns
+        target = 'CheckTotal'
+        exclude_cols = ['Date', 'RevenueCenterName', target, 'is_zero']
+        feature_cols = [col for col in feature_df.columns if col not in exclude_cols]
+        
+        # Encode categorical variables
+        label_encoders = {}
+        for col in feature_cols:
+            if feature_df[col].dtype == 'object':
+                le = LabelEncoder()
+                feature_df[col] = le.fit_transform(feature_df[col].astype(str))
+                label_encoders[col] = le
+        
+        # Prepare features and target
+        X = feature_df[feature_cols]
+        y = feature_df[target]
+        
+        # Handle any remaining NaN values
+        X = X.fillna(0)
+        y = y.fillna(0)
+        
+        logger.info(f"   🔧 Using {len(feature_cols)} features to predict revenue")
+        
+        # Train Random Forest for feature importance
+        rf_model = RandomForestRegressor(
+            n_estimators=100,
+            random_state=42,
+            max_depth=10,
+            n_jobs=-1
+        )
+        
+        rf_model.fit(X, y)
+        
+        # Get feature importance scores
+        feature_importance = rf_model.feature_importances_
+        
+        # Create feature importance dictionary
+        importance_dict = {}
+        for i, col in enumerate(feature_cols):
+            importance_dict[col] = float(feature_importance[i])
+        
+        # Sort by importance (descending)
+        sorted_importance = dict(sorted(importance_dict.items(), key=lambda x: x[1], reverse=True))
+        
+        # Create visualization data for top features
+        top_features = dict(list(sorted_importance.items())[:15])  # Top 15 features
+        
+        # Create importance plot
+        plt.figure(figsize=(12, 8))
+        features = list(top_features.keys())
+        importances = list(top_features.values())
+        
+        # Create horizontal bar plot
+        bars = plt.barh(range(len(features)), importances, color='steelblue', alpha=0.8)
+        plt.yticks(range(len(features)), features)
+        plt.xlabel('Feature Importance (Random Forest)')
+        plt.title('Feature Importance for Predicting Revenue (CheckTotal)')
+        plt.gca().invert_yaxis()  # Highest importance at top
+        
+        # Add importance values on bars
+        for i, (bar, importance) in enumerate(zip(bars, importances)):
+            plt.text(importance + 0.001, i, f'{importance:.3f}', 
+                    va='center', ha='left', fontsize=9)
+        
+        plt.tight_layout()
+        importance_plot = plot_to_base64()
+        
+        # Calculate model performance metrics
+        y_pred = rf_model.predict(X)
+        r2 = r2_score(y, y_pred)
+        mae = mean_absolute_error(y, y_pred)
+        
+        # Categorize features by type for better understanding
+        feature_categories = {
+            'temporal': [],
+            'events': [],
+            'operational': [],
+            'location': []
+        }
+        
+        for feature in feature_cols:
+            if any(word in feature.lower() for word in ['month', 'year', 'day', 'date']):
+                feature_categories['temporal'].append(feature)
+            elif feature.startswith('Is') or 'event' in feature.lower():
+                feature_categories['events'].append(feature)
+            elif 'center' in feature.lower() or 'meal' in feature.lower():
+                feature_categories['operational'].append(feature)
+            else:
+                feature_categories['location'].append(feature)
+        
+        logger.info(f"✅ Feature importance analysis completed")
+        logger.info(f"   🎯 Model R² score: {r2:.3f}")
+        logger.info(f"   📊 Top feature: {list(sorted_importance.keys())[0]} ({list(sorted_importance.values())[0]:.3f})")
+        
+        return jsonify({
+            'success': True,
+            'feature_importance_plot': importance_plot,
+            'feature_importance': sorted_importance,
+            'top_features': top_features,
+            'model_performance': {
+                'r2_score': float(r2),
+                'mae': float(mae),
+                'features_count': len(feature_cols),
+                'data_points': len(X)
+            },
+            'feature_categories': feature_categories,
+            'analysis_summary': {
+                'total_features': len(feature_cols),
+                'top_feature': list(sorted_importance.keys())[0],
+                'top_importance': float(list(sorted_importance.values())[0]),
+                'model_quality': 'Good' if r2 > 0.7 else 'Moderate' if r2 > 0.5 else 'Fair'
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in feature importance analysis: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/models/individual-training', methods=['POST'])

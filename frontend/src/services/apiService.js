@@ -43,13 +43,14 @@ export const apiService = {
   createLagFeatures: (config = {}) => apiClient.post('/feature-engineering/lag-features', config),
   createRollingFeatures: (config = {}) => apiClient.post('/feature-engineering/rolling-features', config),
   getLeakageDemo: () => apiClient.get('/feature-engineering/leakage-prevention'),
+  analyzeFeatureImportance: () => apiClient.get('/feature-engineering/feature-importance'),
 
   // Model training endpoints
   trainIndividualModels: (config = {}) => apiClient.post('/models/individual-training', config),
   trainEnsembleModels: (config = {}) => apiClient.post('/models/ensemble-training', config),
   getModelComparison: () => apiClient.get('/models/performance-comparison'),
   generatePredictions: (config = {}) => apiClient.post('/models/predictions', config),
-  getFeatureImportance: (model = 'xgboost') => apiClient.get(`/models/feature-importance?model=${model}`),
+  getModelFeatureImportance: (model = 'xgboost') => apiClient.get(`/models/feature-importance?model=${model}`),
   
   // Original data analysis
   getOriginalDataFeatures: () => apiClient.get('/analysis/original-data-features'),

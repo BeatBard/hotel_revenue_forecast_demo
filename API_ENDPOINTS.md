@@ -125,6 +125,13 @@ GET /api/feature-engineering/leakage-prevention
 **Description**: Demonstrate data leakage prevention  
 **Response**: Examples of leaky vs safe features
 
+#### Get Feature Importance Analysis
+```http
+GET /api/feature-engineering/feature-importance
+```
+**Description**: Analyze feature importance for predicting CheckTotal using Random Forest model with real revenue data  
+**Response**: Feature importance plot, rankings, model performance metrics, feature categories
+
 ---
 
 ### Model Training

@@ -42,7 +42,7 @@ const ModelTraining = ({ dataLoaded }) => {
 
   const loadFeatureImportance = async (model = 'xgboost') => {
     try {
-      const response = await apiService.getFeatureImportance(model);
+      const response = await apiService.getModelFeatureImportance(model);
       
       // Check if there's an error in the response
       if (response.error) {

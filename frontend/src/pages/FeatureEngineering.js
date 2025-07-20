@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
-import { Card, Row, Col, Button, Typography, Alert, Tabs, Tag, List, Divider } from 'antd';
-import { SettingOutlined, SafetyOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Typography, Alert, Tabs, Tag, List, Divider, Table, Statistic, Image } from 'antd';
+import { SettingOutlined, SafetyOutlined, ExperimentOutlined, BarChartOutlined } from '@ant-design/icons';
+import styled from 'styled-components';
 import { apiService } from '../services/apiService';
 
 const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
+
+const ImageContainer = styled.div`
+  text-align: center;
+  margin: 20px 0;
+  
+  img {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const StyledCard = styled(Card)`
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+`;
 
 const FeatureEngineering = ({ dataLoaded }) => {
   const [loading, setLoading] = useState(false);
@@ -12,6 +30,7 @@ const FeatureEngineering = ({ dataLoaded }) => {
   const [lagFeatures, setLagFeatures] = useState(null);
   const [rollingFeatures, setRollingFeatures] = useState(null);
   const [leakageDemo, setLeakageDemo] = useState(null);
+  const [featureImportance, setFeatureImportance] = useState(null);
 
   const createTemporalFeatures = async () => {
     setLoading(true);
@@ -56,6 +75,18 @@ const FeatureEngineering = ({ dataLoaded }) => {
       setLeakageDemo(response);
     } catch (error) {
       console.error('Failed to load leakage demonstration:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeFeatureImportance = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.analyzeFeatureImportance();
+      setFeatureImportance(response);
+    } catch (error) {
+      console.error('Failed to analyze feature importance:', error);
     } finally {
       setLoading(false);
     }
@@ -285,6 +316,148 @@ const FeatureEngineering = ({ dataLoaded }) => {
                     message="🛡️ Data Leakage Prevention is Critical"
                     description="Proper feature engineering ensures models learn realistic patterns that will generalize to new data, not artifacts from seeing the future."
                     type="warning"
+                    showIcon
+                  />
+                </Col>
+              </Row>
+            )}
+          </Card>
+        </TabPane>
+
+        <TabPane tab={<span><BarChartOutlined />Feature Importance</span>} key="importance">
+          <Card>
+            <div style={{ marginBottom: '16px' }}>
+              <Button 
+                type="primary" 
+                icon={<BarChartOutlined />}
+                onClick={analyzeFeatureImportance}
+                loading={loading}
+              >
+                Analyze Feature Importance for Revenue Prediction
+              </Button>
+            </div>
+            
+            {featureImportance && (
+              <Row gutter={[24, 24]}>
+                <Col span={24}>
+                  <StyledCard title="Feature Importance Analysis for CheckTotal Prediction">
+                    <ImageContainer>
+                      <Image
+                        src={`data:image/png;base64,${featureImportance.feature_importance_plot}`}
+                        alt="Feature Importance Analysis"
+                        preview={{
+                          mask: 'Click to view full size'
+                        }}
+                      />
+                    </ImageContainer>
+                  </StyledCard>
+                </Col>
+
+                <Col span={24}>
+                  <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                    <Col span={6}>
+                      <StyledCard>
+                        <Statistic
+                          title="Model Performance (R²)"
+                          value={featureImportance.model_performance?.r2_score}
+                          precision={3}
+                          valueStyle={{ color: '#1890ff' }}
+                        />
+                      </StyledCard>
+                    </Col>
+                    <Col span={6}>
+                      <StyledCard>
+                        <Statistic
+                          title="Features Analyzed"
+                          value={featureImportance.model_performance?.features_count}
+                          valueStyle={{ color: '#52c41a' }}
+                        />
+                      </StyledCard>
+                    </Col>
+                    <Col span={6}>
+                      <StyledCard>
+                        <Statistic
+                          title="Data Points"
+                          value={featureImportance.model_performance?.data_points}
+                          valueStyle={{ color: '#722ed1' }}
+                        />
+                      </StyledCard>
+                    </Col>
+                    <Col span={6}>
+                      <StyledCard>
+                        <Statistic
+                          title="Model Quality"
+                          value={featureImportance.analysis_summary?.model_quality}
+                          valueStyle={{ color: '#fa8c16' }}
+                        />
+                      </StyledCard>
+                    </Col>
+                  </Row>
+                </Col>
+
+                <Col xs={24} lg={12}>
+                  <StyledCard title="Top 10 Most Important Features">
+                    <Table
+                      size="small"
+                      dataSource={Object.entries(featureImportance.top_features || {}).map(([feature, importance], index) => ({
+                        key: index,
+                        rank: index + 1,
+                        feature,
+                        importance
+                      }))}
+                      columns={[
+                        { title: 'Rank', dataIndex: 'rank', key: 'rank', width: 60 },
+                        { title: 'Feature', dataIndex: 'feature', key: 'feature' },
+                        { 
+                          title: 'Importance', 
+                          dataIndex: 'importance', 
+                          key: 'importance',
+                          render: (value) => (
+                            <div>
+                              <div style={{ 
+                                width: `${value * 300}px`, 
+                                height: '12px', 
+                                backgroundColor: '#1890ff', 
+                                borderRadius: '6px',
+                                marginBottom: '4px'
+                              }} />
+                              <Text style={{ fontSize: '11px' }}>{value.toFixed(4)}</Text>
+                            </div>
+                          )
+                        }
+                      ]}
+                      pagination={false}
+                    />
+                  </StyledCard>
+                </Col>
+
+                <Col xs={24} lg={12}>
+                  <StyledCard title="Feature Categories">
+                    {Object.entries(featureImportance.feature_categories || {}).map(([category, features]) => (
+                      features.length > 0 && (
+                        <div key={category} style={{ marginBottom: '16px' }}>
+                          <Text strong style={{ textTransform: 'capitalize' }}>{category} Features:</Text>
+                          <div style={{ marginTop: '8px' }}>
+                            {features.slice(0, 5).map(feature => (
+                              <Tag key={feature} color="blue" style={{ marginBottom: '4px' }}>
+                                {feature}
+                              </Tag>
+                            ))}
+                            {features.length > 5 && (
+                              <Tag color="default">+{features.length - 5} more</Tag>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    ))}
+                  </StyledCard>
+                </Col>
+
+                <Col span={24}>
+                  <Alert
+                    message="🎯 Feature Importance Insights"
+                    description={`The Random Forest model identified "${featureImportance.analysis_summary?.top_feature}" as the most important feature for predicting revenue, with an importance score of ${featureImportance.analysis_summary?.top_importance?.toFixed(4)}. This analysis helps understand which variables have the strongest predictive power for CheckTotal.`}
+                    type="info"
                     showIcon
                   />
                 </Col>
