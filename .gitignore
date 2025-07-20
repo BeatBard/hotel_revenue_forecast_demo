@@ -242,7 +242,6 @@ Thumbs.db
 *.h5
 *.hdf5
 *.joblib
-models/
 checkpoints/
 *.model
 *.weights
