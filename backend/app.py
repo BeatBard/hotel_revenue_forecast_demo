@@ -691,48 +691,6 @@ def get_data_overview():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/eda/descriptive-stats', methods=['GET'])
-def get_descriptive_stats():
-    """Get detailed descriptive statistics for numerical columns"""
-    try:
-        logger.info("📊 Starting descriptive statistics analysis...")
-        
-        df = load_all_revenue_data()
-        if df is None or df.empty:
-            return jsonify({'error': 'No data available'}), 400
-        
-        # Select numerical columns
-        numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        
-        # Calculate descriptive statistics
-        desc_stats = {}
-        for col in numerical_cols:
-            stats_dict = {
-                'count': int(df[col].count()),
-                'mean': float(df[col].mean()),
-                'std': float(df[col].std()),
-                'min': float(df[col].min()),
-                'q25': float(df[col].quantile(0.25)),
-                'median': float(df[col].median()),
-                'q75': float(df[col].quantile(0.75)),
-                'max': float(df[col].max()),
-                'skewness': float(stats.skew(df[col].dropna())),
-                'kurtosis': float(stats.kurtosis(df[col].dropna()))
-            }
-            desc_stats[col] = stats_dict
-        
-        logger.info(f"✅ Descriptive statistics completed for {len(numerical_cols)} columns")
-        
-        return jsonify({
-            'success': True,
-            'descriptive_stats': desc_stats,
-            'numerical_columns': numerical_cols
-        })
-        
-    except Exception as e:
-        logger.error(f"❌ Error in descriptive statistics: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
 
 @app.route('/api/eda/revenue-distributions', methods=['GET'])
 def get_revenue_distributions():

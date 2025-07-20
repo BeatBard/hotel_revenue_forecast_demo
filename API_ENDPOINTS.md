@@ -35,12 +35,6 @@ GET /api/eda/data-overview
 **Description**: Get comprehensive data overview and basic statistics  
 **Response**: Dataset shape, missing values, data types, date ranges, revenue stats
 
-#### Get Descriptive Statistics
-```http
-GET /api/eda/descriptive-stats
-```
-**Description**: Get detailed descriptive statistics for numerical columns  
-**Response**: Count, mean, std, min, quartiles, max, skewness, kurtosis for all numerical columns
 
 #### Get Revenue Distributions
 ```http

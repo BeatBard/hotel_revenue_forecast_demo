@@ -31,7 +31,7 @@ export const apiService = {
   // EDA endpoints
   edaAnalysis: (endpoint) => apiClient.get(`/eda/${endpoint}`),
   getDataOverview: () => apiClient.get('/eda/data-overview'),
-  getDescriptiveStats: () => apiClient.get('/eda/descriptive-stats'),
+
   getRevenueDistributions: () => apiClient.get('/eda/revenue-distributions'),
   getTimeSeriesAnalysis: () => apiClient.get('/eda/time-series-analysis'),
   getCorrelationAnalysis: () => apiClient.get('/eda/correlation-analysis'),

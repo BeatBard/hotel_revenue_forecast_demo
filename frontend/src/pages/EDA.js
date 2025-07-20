@@ -71,7 +71,7 @@ const ImageContainer = styled.div`
 const EDA = () => {
   const [loading, setLoading] = useState(false);
   const [dataOverview, setDataOverview] = useState(null);
-  const [descriptiveStats, setDescriptiveStats] = useState(null);
+
   const [revenueDistributions, setRevenueDistributions] = useState(null);
   const [timeSeriesAnalysis, setTimeSeriesAnalysis] = useState(null);
   const [correlationAnalysis, setCorrelationAnalysis] = useState(null);
@@ -114,9 +114,7 @@ const EDA = () => {
       case 'overview':
         if (!dataOverview) loadEDAData('data-overview', setDataOverview);
         break;
-      case 'descriptive':
-        if (!descriptiveStats) loadEDAData('descriptive-stats', setDescriptiveStats);
-        break;
+
       case 'distributions':
         if (!revenueDistributions) loadEDAData('revenue-distributions', setRevenueDistributions);
         break;
@@ -254,43 +252,7 @@ const EDA = () => {
     </div>
   );
 
-  const renderDescriptiveStats = () => (
-    <div>
-      {descriptiveStats && descriptiveStats.descriptive_stats && (
-        <StyledCard title="Descriptive Statistics">
-          <Table
-            dataSource={Object.entries(descriptiveStats.descriptive_stats).map(([column, stats]) => ({
-              key: column,
-              column,
-              ...stats
-            }))}
-            columns={[
-              { title: 'Column', dataIndex: 'column', key: 'column', fixed: 'left', width: 150 },
-              { title: 'Count', dataIndex: 'count', key: 'count', render: (val) => val?.toLocaleString() || 'N/A' },
-              { title: 'Mean', dataIndex: 'mean', key: 'mean', render: (val) => val?.toFixed(2) || 'N/A' },
-              { title: 'Std', dataIndex: 'std', key: 'std', render: (val) => val?.toFixed(2) || 'N/A' },
-              { title: 'Min', dataIndex: 'min', key: 'min', render: (val) => val?.toFixed(2) || 'N/A' },
-              { title: 'Q25', dataIndex: 'q25', key: 'q25', render: (val) => val?.toFixed(2) || 'N/A' },
-              { title: 'Median', dataIndex: 'median', key: 'median', render: (val) => val?.toFixed(2) || 'N/A' },
-              { title: 'Q75', dataIndex: 'q75', key: 'q75', render: (val) => val?.toFixed(2) || 'N/A' },
-              { title: 'Max', dataIndex: 'max', key: 'max', render: (val) => val?.toFixed(2) || 'N/A' },
-              { title: 'Skewness', dataIndex: 'skewness', key: 'skewness', render: (val) => val?.toFixed(3) || 'N/A' },
-              { title: 'Kurtosis', dataIndex: 'kurtosis', key: 'kurtosis', render: (val) => val?.toFixed(3) || 'N/A' },
-            ]}
-            scroll={{ x: 1200 }}
-            pagination={false}
-          />
-        </StyledCard>
-      )}
-      {!descriptiveStats && activeTab === 'descriptive' && (
-        <StyledCard title="Descriptive Statistics">
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <Text type="secondary">Click to load descriptive statistics...</Text>
-          </div>
-        </StyledCard>
-      )}
-    </div>
-  );
+
 
   const renderRevenueDistributions = () => (
     <div>
@@ -687,12 +649,7 @@ const EDA = () => {
             {renderDataOverview()}
           </TabPane>
           
-          <TabPane 
-            tab={<span><BarChartOutlined />Descriptive Stats</span>} 
-            key="descriptive"
-          >
-            {renderDescriptiveStats()}
-          </TabPane>
+
           
           <TabPane 
             tab={<span><PieChartOutlined />Distributions</span>} 
