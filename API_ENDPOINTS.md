@@ -30,24 +30,52 @@ POST /api/load-data
 
 #### Get Data Overview
 ```http
-GET /api/eda/overview
+GET /api/eda/data-overview
 ```
-**Description**: Get comprehensive data overview  
-**Response**: Dataset info, revenue statistics, data quality
+**Description**: Get comprehensive data overview and basic statistics  
+**Response**: Dataset shape, missing values, data types, date ranges, revenue stats
 
-#### Get Revenue Patterns
+#### Get Descriptive Statistics
 ```http
-GET /api/eda/revenue-patterns
+GET /api/eda/descriptive-stats
 ```
-**Description**: Analyze revenue patterns by dimensions  
-**Response**: Meal period analysis, daily trends, patterns
+**Description**: Get detailed descriptive statistics for numerical columns  
+**Response**: Count, mean, std, min, quartiles, max, skewness, kurtosis for all numerical columns
 
-#### Get Seasonal Analysis
+#### Get Revenue Distributions
 ```http
-GET /api/eda/seasonal-analysis
+GET /api/eda/revenue-distributions
 ```
-**Description**: Perform seasonal decomposition  
-**Response**: Trend analysis, seasonal patterns, weekly patterns
+**Description**: Generate revenue distribution plots and analysis  
+**Response**: Distribution plots by meal period, day of week, revenue center + statistics
+
+#### Get Time Series Analysis
+```http
+GET /api/eda/time-series-analysis
+```
+**Description**: Analyze revenue patterns over time  
+**Response**: Daily/monthly trends, seasonal patterns, time series plots
+
+#### Get Correlation Analysis
+```http
+GET /api/eda/correlation-analysis
+```
+**Description**: Analyze correlations between numerical variables  
+**Response**: Correlation matrix heatmap, strong correlations detection
+
+#### Get Categorical Analysis
+```http
+GET /api/eda/categorical-analysis
+```
+**Description**: Analyze categorical variables and their impact on revenue  
+**Response**: Revenue by categories, event impact analysis, categorical plots
+
+#### Get Outlier Analysis
+```http
+GET /api/eda/outlier-analysis
+```
+**Description**: Detect and analyze outliers in revenue data  
+**Response**: Outlier detection using IQR method, visualizations, outlier details
 
 #### Get EDA Visualizations
 ```http

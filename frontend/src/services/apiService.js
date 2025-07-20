@@ -29,10 +29,14 @@ export const apiService = {
   loadData: () => apiClient.post('/load-data'),
 
   // EDA endpoints
-  getDataOverview: () => apiClient.get('/eda/overview'),
-  getRevenuePatterns: () => apiClient.get('/eda/revenue-patterns'),
-  getSeasonalAnalysis: () => apiClient.get('/eda/seasonal-analysis'),
-  getEDAVisualization: (type) => apiClient.get(`/eda/visualizations?type=${type}`),
+  edaAnalysis: (endpoint) => apiClient.get(`/eda/${endpoint}`),
+  getDataOverview: () => apiClient.get('/eda/data-overview'),
+  getDescriptiveStats: () => apiClient.get('/eda/descriptive-stats'),
+  getRevenueDistributions: () => apiClient.get('/eda/revenue-distributions'),
+  getTimeSeriesAnalysis: () => apiClient.get('/eda/time-series-analysis'),
+  getCorrelationAnalysis: () => apiClient.get('/eda/correlation-analysis'),
+  getCategoricalAnalysis: () => apiClient.get('/eda/categorical-analysis'),
+  getOutlierAnalysis: () => apiClient.get('/eda/outlier-analysis'),
 
   // Feature engineering endpoints
   createTemporalFeatures: (config = {}) => apiClient.post('/feature-engineering/create-features', config),

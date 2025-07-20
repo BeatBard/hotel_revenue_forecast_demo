@@ -15,7 +15,19 @@ Author: University Project Demo
 import warnings
 import logging
 import sys
+import os
+import base64
+import io
+import json
 from datetime import datetime
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy import stats
+from scipy.stats import pearsonr, spearmanr
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -26,7 +38,6 @@ matplotlib.use('Agg')  # Use non-GUI backend
 # Import our custom model implementations
 from models.ensemble_model import HotelRevenueEnsemble
 from models.feature_engineering import FeatureEngineer
-
 from utils.data_loader import DataLoader
 
 warnings.filterwarnings('ignore')
@@ -49,6 +60,36 @@ ensemble_model = None
 feature_engineer = None
 data_loader = None
 current_data = None
+
+# Helper function to convert matplotlib plots to base64
+def plot_to_base64():
+    """Convert current matplotlib plot to base64 encoded string"""
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+    buffer.seek(0)
+    plot_data = buffer.getvalue()
+    buffer.close()
+    plt.close()
+    return base64.b64encode(plot_data).decode()
+
+# Helper function to load all revenue center data
+def load_all_revenue_data():
+    """Load data from all revenue centers and combine"""
+    data_frames = []
+    data_dir = 'revenue_center_data'
+    
+    for i in range(1, 10):  # RevenueCenter_1 to RevenueCenter_9
+        file_path = f"{data_dir}/RevenueCenter_{i}_data.csv"
+        if os.path.exists(file_path):
+            df = pd.read_csv(file_path)
+            df['RevenueCenterID'] = i
+            data_frames.append(df)
+    
+    if data_frames:
+        combined_df = pd.concat(data_frames, ignore_index=True)
+        combined_df['Date'] = pd.to_datetime(combined_df['Date'])
+        return combined_df
+    return None
 
 def init_app():
     """Initialize the application with required components"""
@@ -587,6 +628,524 @@ def get_time_series_plots():
     except Exception as e:
         logger.error(f"❌ Error generating time series plots: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+# ===========================
+# EDA ANALYSIS ENDPOINTS
+# ===========================
+
+@app.route('/api/eda/data-overview', methods=['GET'])
+def get_data_overview():
+    """Get comprehensive data overview and basic statistics"""
+    try:
+        logger.info("🔍 Starting EDA data overview analysis...")
+        
+        # Load all revenue center data
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        # Basic info
+        data_shape = df.shape
+        missing_values = df.isnull().sum().to_dict()
+        data_types = df.dtypes.astype(str).to_dict()
+        
+        # Date range
+        date_range = {
+            'start_date': df['Date'].min().strftime('%Y-%m-%d'),
+            'end_date': df['Date'].max().strftime('%Y-%m-%d'),
+            'total_days': (df['Date'].max() - df['Date'].min()).days
+        }
+        
+        # Revenue centers
+        revenue_centers = df['RevenueCenterName'].unique().tolist()
+        meal_periods = df['MealPeriod'].unique().tolist()
+        
+        # Revenue statistics
+        revenue_stats = {
+            'total_revenue': float(df['CheckTotal'].sum()),
+            'mean_revenue': float(df['CheckTotal'].mean()),
+            'median_revenue': float(df['CheckTotal'].median()),
+            'min_revenue': float(df['CheckTotal'].min()),
+            'max_revenue': float(df['CheckTotal'].max()),
+            'std_revenue': float(df['CheckTotal'].std())
+        }
+        
+        logger.info(f"✅ Data overview completed successfully")
+        logger.info(f"   📊 Shape: {data_shape}")
+        logger.info(f"   💰 Total Revenue: ${revenue_stats['total_revenue']:,.2f}")
+        
+        return jsonify({
+            'success': True,
+            'data_shape': data_shape,
+            'missing_values': missing_values,
+            'data_types': data_types,
+            'date_range': date_range,
+            'revenue_centers': revenue_centers,
+            'meal_periods': meal_periods,
+            'revenue_stats': revenue_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in data overview: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eda/descriptive-stats', methods=['GET'])
+def get_descriptive_stats():
+    """Get detailed descriptive statistics for numerical columns"""
+    try:
+        logger.info("📊 Starting descriptive statistics analysis...")
+        
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        # Select numerical columns
+        numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        
+        # Calculate descriptive statistics
+        desc_stats = {}
+        for col in numerical_cols:
+            stats_dict = {
+                'count': int(df[col].count()),
+                'mean': float(df[col].mean()),
+                'std': float(df[col].std()),
+                'min': float(df[col].min()),
+                'q25': float(df[col].quantile(0.25)),
+                'median': float(df[col].median()),
+                'q75': float(df[col].quantile(0.75)),
+                'max': float(df[col].max()),
+                'skewness': float(stats.skew(df[col].dropna())),
+                'kurtosis': float(stats.kurtosis(df[col].dropna()))
+            }
+            desc_stats[col] = stats_dict
+        
+        logger.info(f"✅ Descriptive statistics completed for {len(numerical_cols)} columns")
+        
+        return jsonify({
+            'success': True,
+            'descriptive_stats': desc_stats,
+            'numerical_columns': numerical_cols
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in descriptive statistics: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eda/revenue-distributions', methods=['GET'])
+def get_revenue_distributions():
+    """Generate revenue distribution plots and analysis"""
+    try:
+        logger.info("📈 Starting revenue distribution analysis...")
+        
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        plots = {}
+        
+        # 1. Overall revenue distribution
+        plt.figure(figsize=(12, 8))
+        plt.subplot(2, 2, 1)
+        plt.hist(df['CheckTotal'], bins=50, alpha=0.7, color='skyblue', edgecolor='black')
+        plt.title('Overall Revenue Distribution')
+        plt.xlabel('Revenue ($)')
+        plt.ylabel('Frequency')
+        plt.grid(True, alpha=0.3)
+        
+        # 2. Revenue by meal period
+        plt.subplot(2, 2, 2)
+        df.boxplot(column='CheckTotal', by='MealPeriod', ax=plt.gca())
+        plt.title('Revenue Distribution by Meal Period')
+        plt.xlabel('Meal Period')
+        plt.ylabel('Revenue ($)')
+        plt.suptitle('')
+        
+        # 3. Revenue by day of week
+        plt.subplot(2, 2, 3)
+        revenue_by_dow = df.groupby('DayOfWeek')['CheckTotal'].mean()
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        plt.bar(range(7), [revenue_by_dow.get(i, 0) for i in range(7)], color='lightcoral')
+        plt.title('Average Revenue by Day of Week')
+        plt.xlabel('Day of Week')
+        plt.ylabel('Average Revenue ($)')
+        plt.xticks(range(7), days)
+        plt.grid(True, alpha=0.3)
+        
+        # 4. Revenue by revenue center
+        plt.subplot(2, 2, 4)
+        revenue_by_center = df.groupby('RevenueCenterName')['CheckTotal'].mean().sort_values(ascending=False)
+        plt.bar(range(len(revenue_by_center)), revenue_by_center.values, color='lightgreen')
+        plt.title('Average Revenue by Revenue Center')
+        plt.xlabel('Revenue Center')
+        plt.ylabel('Average Revenue ($)')
+        # Use actual revenue center names from sorted data, not generic RC_1, RC_2...
+        center_labels = [name.replace('RevenueCenter_', 'RC_') for name in revenue_by_center.index]
+        plt.xticks(range(len(revenue_by_center)), center_labels, rotation=45)
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plots['revenue_distributions'] = plot_to_base64()
+        
+        # Statistical summary by categories
+        meal_period_stats = df.groupby('MealPeriod')['CheckTotal'].agg(['mean', 'median', 'std']).to_dict()
+        center_stats = df.groupby('RevenueCenterName')['CheckTotal'].agg(['mean', 'median', 'std']).to_dict()
+        
+        logger.info(f"✅ Revenue distribution analysis completed successfully")
+        
+        return jsonify({
+            'success': True,
+            'plots': plots,
+            'meal_period_stats': meal_period_stats,
+            'center_stats': center_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in revenue distribution analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eda/time-series-analysis', methods=['GET'])
+def get_time_series_analysis():
+    """Analyze revenue patterns over time"""
+    try:
+        logger.info("⏰ Starting time series analysis...")
+        
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        plots = {}
+        
+        # Aggregate daily revenue
+        daily_revenue = df.groupby('Date')['CheckTotal'].sum().reset_index()
+        
+        # 1. Daily revenue time series
+        plt.figure(figsize=(15, 10))
+        plt.subplot(3, 1, 1)
+        plt.plot(daily_revenue['Date'], daily_revenue['CheckTotal'], linewidth=1, alpha=0.7)
+        plt.title('Daily Revenue Time Series')
+        plt.xlabel('Date')
+        plt.ylabel('Daily Revenue ($)')
+        plt.grid(True, alpha=0.3)
+        plt.xticks(rotation=45)
+        
+        # 2. Monthly revenue trends
+        df['YearMonth'] = df['Date'].dt.to_period('M')
+        monthly_revenue = df.groupby('YearMonth')['CheckTotal'].sum()
+        
+        plt.subplot(3, 1, 2)
+        monthly_revenue.plot(kind='bar', alpha=0.8, color='orange')
+        plt.title('Monthly Revenue Trends')
+        plt.xlabel('Month')
+        plt.ylabel('Monthly Revenue ($)')
+        plt.xticks(rotation=45)
+        plt.grid(True, alpha=0.3)
+        
+        # 3. Revenue by hour pattern (if available)
+        plt.subplot(3, 1, 3)
+        meal_period_revenue = df.groupby('MealPeriod')['CheckTotal'].mean()
+        meal_period_revenue.plot(kind='bar', alpha=0.8, color='green')
+        plt.title('Average Revenue by Meal Period')
+        plt.xlabel('Meal Period')
+        plt.ylabel('Average Revenue ($)')
+        plt.xticks(rotation=0)
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plots['time_series'] = plot_to_base64()
+        
+        # Seasonal patterns
+        seasonal_stats = {
+            'daily_stats': daily_revenue['CheckTotal'].describe().to_dict(),
+            'monthly_stats': monthly_revenue.describe().to_dict(),
+            'meal_period_stats': meal_period_revenue.to_dict()
+        }
+        
+        logger.info(f"✅ Time series analysis completed successfully")
+        
+        return jsonify({
+            'success': True,
+            'plots': plots,
+            'seasonal_stats': seasonal_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in time series analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eda/correlation-analysis', methods=['GET'])
+def get_correlation_analysis():
+    """Analyze correlations with CheckTotal (Revenue)"""
+    try:
+        logger.info("🔗 Starting correlation analysis with revenue (CheckTotal)...")
+        
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        # Check if CheckTotal column exists
+        if 'CheckTotal' not in df.columns:
+            return jsonify({'error': 'CheckTotal column not found in data'}), 400
+        
+        # Select numerical columns (excluding CheckTotal itself for predictor analysis)
+        numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        predictor_cols = [col for col in numerical_cols if col != 'CheckTotal']
+        
+        if len(predictor_cols) < 1:
+            return jsonify({'error': 'Not enough predictor columns for correlation analysis'}), 400
+        
+        # Filter out columns with zero variance (constant columns)
+        valid_cols = []
+        for col in predictor_cols:
+            if df[col].std() > 0:  # Only include columns with variation
+                valid_cols.append(col)
+        
+        if len(valid_cols) < 1:
+            return jsonify({'error': 'Not enough variable columns for correlation analysis (all predictor columns are constant)'}), 400
+        
+        logger.info(f"   📊 Analyzing correlations with CheckTotal using {len(valid_cols)} predictor variables")
+        
+        # Calculate correlations with CheckTotal
+        revenue_correlations = {}
+        for col in valid_cols:
+            corr_val = df['CheckTotal'].corr(df[col])
+            if not pd.isna(corr_val) and not np.isinf(corr_val):
+                revenue_correlations[col] = float(corr_val)
+            else:
+                revenue_correlations[col] = 0.0
+        
+        # Sort correlations by absolute value (strongest first)
+        sorted_correlations = dict(sorted(revenue_correlations.items(), key=lambda x: abs(x[1]), reverse=True))
+        
+        # Create correlation visualization (bar plot showing correlations with revenue)
+        plt.figure(figsize=(14, 8))
+        
+        # All correlations with CheckTotal
+        variables = list(sorted_correlations.keys())
+        correlations = list(sorted_correlations.values())
+        colors = ['green' if corr > 0 else 'red' for corr in correlations]
+        
+        bars = plt.barh(range(len(variables)), correlations, color=colors, alpha=0.7)
+        plt.yticks(range(len(variables)), variables)
+        plt.xlabel('Correlation with Revenue (CheckTotal)')
+        plt.title('Correlation of Variables with Revenue')
+        plt.axvline(x=0, color='black', linestyle='-', alpha=0.3)
+        plt.grid(True, alpha=0.3)
+        
+        # Add correlation values on bars
+        for i, (bar, corr) in enumerate(zip(bars, correlations)):
+            plt.text(corr + (0.02 if corr >= 0 else -0.02), i, f'{corr:.3f}', 
+                    va='center', ha='left' if corr >= 0 else 'right', fontsize=8)
+        
+        plt.tight_layout()
+        correlation_plot = plot_to_base64()
+        
+        logger.info(f"✅ Revenue correlation analysis completed")
+        logger.info(f"   🔗 Analyzed correlations with revenue for {len(valid_cols)} variables")
+        
+        return jsonify({
+            'success': True,
+            'correlation_plot': correlation_plot,
+            'revenue_correlations': sorted_correlations,
+            'analyzed_variables': valid_cols,
+            'total_variables': len(valid_cols)
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in correlation analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eda/categorical-analysis', methods=['GET'])
+def get_categorical_analysis():
+    """Analyze categorical variables and their impact on revenue"""
+    try:
+        logger.info("📋 Starting categorical analysis...")
+        
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        plots = {}
+        categorical_stats = {}
+        
+        # Key categorical columns to analyze
+        categorical_cols = ['MealPeriod', 'DayOfWeek', 'Month', 'IslamicPeriod', 
+                           'TourismIntensity', 'RevenueImpact']
+        
+        # Remove columns that don't exist in the data
+        available_categorical_cols = [col for col in categorical_cols if col in df.columns]
+        
+        # 1. Revenue by categorical variables
+        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+        axes = axes.flatten()
+        
+        for i, col in enumerate(available_categorical_cols[:6]):
+            if i < len(axes):
+                revenue_by_category = df.groupby(col)['CheckTotal'].mean().sort_values(ascending=False)
+                categorical_stats[col] = revenue_by_category.to_dict()
+                
+                axes[i].bar(range(len(revenue_by_category)), revenue_by_category.values, alpha=0.8)
+                axes[i].set_title(f'Average Revenue by {col}')
+                axes[i].set_xlabel(col)
+                axes[i].set_ylabel('Average Revenue ($)')
+                axes[i].tick_params(axis='x', rotation=45)
+                axes[i].grid(True, alpha=0.3)
+                
+                # Set x-tick labels
+                if len(revenue_by_category) <= 10:
+                    axes[i].set_xticks(range(len(revenue_by_category)))
+                    axes[i].set_xticklabels(revenue_by_category.index, rotation=45, ha='right')
+                else:
+                    axes[i].set_xticks(range(0, len(revenue_by_category), max(1, len(revenue_by_category)//5)))
+                    axes[i].set_xticklabels([revenue_by_category.index[j] for j in range(0, len(revenue_by_category), max(1, len(revenue_by_category)//5))], rotation=45, ha='right')
+        
+        # Hide unused subplots
+        for i in range(len(available_categorical_cols), len(axes)):
+            axes[i].set_visible(False)
+        
+        plt.tight_layout()
+        plots['categorical_analysis'] = plot_to_base64()
+        
+        # Event impact analysis
+        event_columns = [col for col in df.columns if col.startswith('Is') and col != 'is_zero']
+        event_impact = {}
+        
+        for event_col in event_columns:
+            if df[event_col].dtype == 'object':
+                # Convert boolean-like strings to actual booleans
+                df[event_col] = df[event_col].astype(str).str.lower().isin(['true', '1', 'yes'])
+            
+            event_revenue = df.groupby(event_col)['CheckTotal'].mean()
+            if len(event_revenue) == 2:  # Binary event
+                impact = event_revenue.get(True, event_revenue.get(1, 0)) - event_revenue.get(False, event_revenue.get(0, 0))
+                event_impact[event_col] = {
+                    'with_event': float(event_revenue.get(True, event_revenue.get(1, 0))),
+                    'without_event': float(event_revenue.get(False, event_revenue.get(0, 0))),
+                    'impact': float(impact)
+                }
+        
+        logger.info(f"✅ Categorical analysis completed")
+        logger.info(f"   📋 Analyzed {len(available_categorical_cols)} categorical variables")
+        logger.info(f"   🎯 Analyzed {len(event_impact)} event impacts")
+        
+        return jsonify({
+            'success': True,
+            'plots': plots,
+            'categorical_stats': categorical_stats,
+            'event_impact': event_impact,
+            'analyzed_columns': available_categorical_cols
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in categorical analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eda/outlier-analysis', methods=['GET'])
+def get_outlier_analysis():
+    """Detect and analyze outliers in revenue data"""
+    try:
+        logger.info("🎯 Starting outlier analysis...")
+        
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        # Focus on revenue outliers
+        revenue = df['CheckTotal']
+        
+        # Calculate outlier thresholds using IQR method
+        Q1 = revenue.quantile(0.25)
+        Q3 = revenue.quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        
+        # Identify outliers
+        outliers = df[(revenue < lower_bound) | (revenue > upper_bound)]
+        
+        # Create outlier visualization
+        plt.figure(figsize=(15, 10))
+        
+        # 1. Box plot
+        plt.subplot(2, 2, 1)
+        plt.boxplot(revenue, vert=True)
+        plt.title('Revenue Box Plot with Outliers')
+        plt.ylabel('Revenue ($)')
+        plt.grid(True, alpha=0.3)
+        
+        # 2. Histogram with outliers highlighted
+        plt.subplot(2, 2, 2)
+        plt.hist(revenue, bins=50, alpha=0.7, color='skyblue', edgecolor='black')
+        plt.axvline(lower_bound, color='red', linestyle='--', label=f'Lower bound: ${lower_bound:.2f}')
+        plt.axvline(upper_bound, color='red', linestyle='--', label=f'Upper bound: ${upper_bound:.2f}')
+        plt.title('Revenue Distribution with Outlier Bounds')
+        plt.xlabel('Revenue ($)')
+        plt.ylabel('Frequency')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # 3. Outliers by meal period
+        plt.subplot(2, 2, 3)
+        outlier_by_meal = outliers['MealPeriod'].value_counts()
+        outlier_by_meal.plot(kind='bar', alpha=0.8, color='orange')
+        plt.title('Outliers by Meal Period')
+        plt.xlabel('Meal Period')
+        plt.ylabel('Number of Outliers')
+        plt.xticks(rotation=45)
+        plt.grid(True, alpha=0.3)
+        
+        # 4. Outliers over time
+        plt.subplot(2, 2, 4)
+        outliers_daily = outliers.groupby('Date').size()
+        plt.plot(outliers_daily.index, outliers_daily.values, marker='o', alpha=0.7)
+        plt.title('Outliers Over Time')
+        plt.xlabel('Date')
+        plt.ylabel('Number of Outliers')
+        plt.xticks(rotation=45)
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        outlier_plot = plot_to_base64()
+        
+        # Outlier statistics
+        outlier_stats = {
+            'total_records': len(df),
+            'total_outliers': len(outliers),
+            'outlier_percentage': (len(outliers) / len(df)) * 100,
+            'lower_bound': float(lower_bound),
+            'upper_bound': float(upper_bound),
+            'Q1': float(Q1),
+            'Q3': float(Q3),
+            'IQR': float(IQR),
+            'max_outlier': float(outliers['CheckTotal'].max()) if len(outliers) > 0 else None,
+            'min_outlier': float(outliers['CheckTotal'].min()) if len(outliers) > 0 else None
+        }
+        
+        # Outlier details (top 10 highest and lowest)
+        top_outliers = outliers.nlargest(10, 'CheckTotal')[['Date', 'MealPeriod', 'RevenueCenterName', 'CheckTotal']].to_dict('records')
+        bottom_outliers = outliers.nsmallest(10, 'CheckTotal')[['Date', 'MealPeriod', 'RevenueCenterName', 'CheckTotal']].to_dict('records')
+        
+        logger.info(f"✅ Outlier analysis completed")
+        logger.info(f"   🎯 Found {len(outliers)} outliers ({outlier_stats['outlier_percentage']:.2f}%)")
+        
+        return jsonify({
+            'success': True,
+            'outlier_plot': outlier_plot,
+            'outlier_stats': outlier_stats,
+            'top_outliers': top_outliers,
+            'bottom_outliers': bottom_outliers
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in outlier analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     init_app()

@@ -14,7 +14,7 @@ import styled from 'styled-components';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
-
+import EDA from './pages/EDA';
 import FeatureEngineering from './pages/FeatureEngineering';
 import ModelTraining from './pages/ModelTraining';
 import Results from './pages/Results';
@@ -128,7 +128,11 @@ const App = () => {
       icon: <DashboardOutlined />,
       label: 'Dashboard',
     },
-
+    {
+      key: 'eda',
+      icon: <BarChartOutlined />,
+      label: 'EDA Analysis',
+    },
     {
       key: 'feature-engineering',
       icon: <SettingOutlined />,
@@ -166,7 +170,8 @@ const App = () => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard dataLoaded={dataLoaded} onLoadData={loadData} />;
-
+      case 'eda':
+        return <EDA dataLoaded={dataLoaded} />;
       case 'feature-engineering':
         return <FeatureEngineering dataLoaded={dataLoaded} />;
       case 'model-training':
