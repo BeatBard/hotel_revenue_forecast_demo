@@ -401,19 +401,67 @@ class HotelRevenueEnsemble:
                 numeric_feature_cols.append(col)
         
         # Ensure consistent feature sets across all datasets
-        common_features = list(set(numeric_feature_cols) & set(val_features.columns) & set(test_features.columns))
+        train_cols = set(numeric_feature_cols)
+        val_cols = set(val_features.columns)
+        test_cols = set(test_features.columns)
+        common_features = list(train_cols & val_cols & test_cols)
         
         # Final filter to ensure all are numeric in all datasets
         final_features = []
         for col in common_features:
-            if (pd.api.types.is_numeric_dtype(train_features[col]) and 
-                pd.api.types.is_numeric_dtype(val_features[col]) and 
-                pd.api.types.is_numeric_dtype(test_features[col])):
+            train_numeric = pd.api.types.is_numeric_dtype(train_features[col])
+            val_numeric = pd.api.types.is_numeric_dtype(val_features[col])
+            test_numeric = pd.api.types.is_numeric_dtype(test_features[col])
+            if train_numeric and val_numeric and test_numeric:
                 final_features.append(col)
         
         common_features = final_features
         
-        # Prepare final datasets
+        # FEATURE SELECTION: Drop features with very low correlation to revenue
+        logger.info("🔍 Analyzing feature correlations to revenue for feature selection...")
+        correlation_threshold = 0.01  # Minimum correlation threshold
+        
+        # Calculate correlations with revenue using training data
+        X_temp = train_features[common_features].fillna(0)
+        y_temp = train_features['CheckTotal']
+        
+        feature_correlations = {}
+        low_correlation_features = []
+        
+        for feature in common_features:
+            try:
+                correlation = abs(X_temp[feature].corr(y_temp))
+                if not pd.isna(correlation):
+                    feature_correlations[feature] = correlation
+                    if correlation < correlation_threshold:
+                        low_correlation_features.append(feature)
+                else:
+                    # Remove features with NaN correlation
+                    low_correlation_features.append(feature)
+            except:
+                # Remove problematic features
+                low_correlation_features.append(feature)
+        
+        # Remove low correlation features
+        selected_features = [
+            f for f in common_features if f not in low_correlation_features
+        ]
+        
+        logger.info(f"   📊 Feature correlation analysis completed:")
+        logger.info(f"   📈 Features before selection: {len(common_features)}")
+        num_dropped = len(low_correlation_features)
+        logger.info(f"   📉 Features with correlation < {correlation_threshold}: {num_dropped}")
+        logger.info(f"   ✅ Features after selection: {len(selected_features)}")
+        
+        if low_correlation_features:
+            dropped_preview = low_correlation_features[:5]
+            more_text = '...' if len(low_correlation_features) > 5 else ''
+            logger.info(f"   🗑️ Dropped low-correlation features: {dropped_preview}{more_text}")
+        
+        # Update feature list to selected features
+        common_features = selected_features
+        
+        # Prepare final datasets with selected features only
         X_train = train_features[common_features].fillna(0)
         y_train = train_features['CheckTotal']
         

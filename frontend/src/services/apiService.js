@@ -44,6 +44,7 @@ export const apiService = {
   createRollingFeatures: (config = {}) => apiClient.post('/feature-engineering/rolling-features', config),
   getLeakageDemo: () => apiClient.get('/feature-engineering/leakage-prevention'),
   analyzeFeatureImportance: () => apiClient.get('/feature-engineering/feature-importance'),
+  analyzeFeatureCorrelations: () => apiClient.get('/feature-engineering/correlation-analysis'),
 
   // Model training endpoints
   trainIndividualModels: (config = {}) => apiClient.post('/models/individual-training', config),

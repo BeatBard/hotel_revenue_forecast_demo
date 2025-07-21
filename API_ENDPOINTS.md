@@ -132,6 +132,13 @@ GET /api/feature-engineering/feature-importance
 **Description**: Analyze feature importance for predicting CheckTotal using Random Forest model with real revenue data  
 **Response**: Feature importance plot, rankings, model performance metrics, feature categories
 
+#### Get Feature Correlation Analysis
+```http
+GET /api/feature-engineering/correlation-analysis
+```
+**Description**: Analyze correlation between features and revenue to identify low-correlation features for removal  
+**Response**: Correlation distribution plot, high/low correlation features, removal recommendations
+
 ---
 
 ### Model Training

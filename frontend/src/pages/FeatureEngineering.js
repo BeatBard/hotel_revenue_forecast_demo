@@ -31,6 +31,7 @@ const FeatureEngineering = ({ dataLoaded }) => {
   const [rollingFeatures, setRollingFeatures] = useState(null);
   const [leakageDemo, setLeakageDemo] = useState(null);
   const [featureImportance, setFeatureImportance] = useState(null);
+  const [correlationAnalysis, setCorrelationAnalysis] = useState(null);
 
   const createTemporalFeatures = async () => {
     setLoading(true);
@@ -87,6 +88,18 @@ const FeatureEngineering = ({ dataLoaded }) => {
       setFeatureImportance(response);
     } catch (error) {
       console.error('Failed to analyze feature importance:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeFeatureCorrelations = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.analyzeFeatureCorrelations();
+      setCorrelationAnalysis(response);
+    } catch (error) {
+      console.error('Failed to analyze feature correlations:', error);
     } finally {
       setLoading(false);
     }
@@ -458,6 +471,170 @@ const FeatureEngineering = ({ dataLoaded }) => {
                     message="🎯 Feature Importance Insights"
                     description={`The Random Forest model identified "${featureImportance.analysis_summary?.top_feature}" as the most important feature for predicting revenue, with an importance score of ${featureImportance.analysis_summary?.top_importance?.toFixed(4)}. This analysis helps understand which variables have the strongest predictive power for CheckTotal.`}
                     type="info"
+                    showIcon
+                  />
+                </Col>
+              </Row>
+            )}
+          </Card>
+        </TabPane>
+
+        <TabPane tab={<span>📊 Feature Correlation</span>} key="correlation">
+          <Card>
+            <div style={{ marginBottom: '16px' }}>
+              <Button 
+                type="primary" 
+                icon={<BarChartOutlined />}
+                onClick={analyzeFeatureCorrelations}
+                loading={loading}
+              >
+                Analyze Feature Correlations with Revenue
+              </Button>
+            </div>
+            
+            {correlationAnalysis && (
+              <Row gutter={[24, 24]}>
+                <Col span={24}>
+                  <StyledCard title="Feature Correlation Distribution">
+                    <ImageContainer>
+                      <Image
+                        src={`data:image/png;base64,${correlationAnalysis.correlation_plot}`}
+                        alt="Feature Correlation Distribution"
+                        preview={{
+                          mask: 'Click to view full size'
+                        }}
+                      />
+                    </ImageContainer>
+                  </StyledCard>
+                </Col>
+
+                <Col span={24}>
+                  <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                    <Col span={6}>
+                      <StyledCard>
+                        <Statistic
+                          title="Total Features"
+                          value={correlationAnalysis.total_features}
+                          valueStyle={{ color: '#1890ff' }}
+                        />
+                      </StyledCard>
+                    </Col>
+                    <Col span={6}>
+                      <StyledCard>
+                        <Statistic
+                          title="High Correlation Features"
+                          value={correlationAnalysis.summary?.high_correlation_count}
+                          valueStyle={{ color: '#52c41a' }}
+                        />
+                      </StyledCard>
+                    </Col>
+                    <Col span={6}>
+                      <StyledCard>
+                        <Statistic
+                          title="Low Correlation Features"
+                          value={correlationAnalysis.summary?.low_correlation_count}
+                          valueStyle={{ color: '#fa541c' }}
+                        />
+                      </StyledCard>
+                    </Col>
+                    <Col span={6}>
+                      <StyledCard>
+                        <Statistic
+                          title="Removal Percentage"
+                          value={correlationAnalysis.summary?.removal_percentage}
+                          suffix="%"
+                          valueStyle={{ color: '#722ed1' }}
+                        />
+                      </StyledCard>
+                    </Col>
+                  </Row>
+                </Col>
+
+                <Col xs={24} lg={12}>
+                  <StyledCard title="Features to Keep (High Correlation)">
+                    <Table
+                      size="small"
+                      dataSource={correlationAnalysis.high_correlation_features?.slice(0, 10).map((item, index) => ({
+                        key: index,
+                        rank: index + 1,
+                        feature: item.feature,
+                        correlation: item.correlation
+                      }))}
+                      columns={[
+                        { title: 'Rank', dataIndex: 'rank', key: 'rank', width: 60 },
+                        { title: 'Feature', dataIndex: 'feature', key: 'feature' },
+                        { 
+                          title: 'Correlation', 
+                          dataIndex: 'correlation', 
+                          key: 'correlation',
+                          render: (value) => (
+                            <div>
+                              <div style={{ 
+                                width: `${value * 500}px`, 
+                                height: '8px', 
+                                backgroundColor: '#52c41a', 
+                                borderRadius: '4px',
+                                marginBottom: '4px'
+                              }} />
+                              <Text style={{ fontSize: '11px' }}>{value.toFixed(4)}</Text>
+                            </div>
+                          )
+                        }
+                      ]}
+                      pagination={false}
+                    />
+                  </StyledCard>
+                </Col>
+
+                <Col xs={24} lg={12}>
+                  <StyledCard title="Features to Drop (Low Correlation)">
+                    <Table
+                      size="small"
+                      dataSource={correlationAnalysis.low_correlation_features?.slice(0, 10).map((item, index) => ({
+                        key: index,
+                        feature: item.feature,
+                        correlation: item.correlation
+                      }))}
+                      columns={[
+                        { title: 'Feature', dataIndex: 'feature', key: 'feature' },
+                        { 
+                          title: 'Correlation', 
+                          dataIndex: 'correlation', 
+                          key: 'correlation',
+                          render: (value) => (
+                            <div>
+                              <div style={{ 
+                                width: `${value * 500}px`, 
+                                height: '8px', 
+                                backgroundColor: '#fa541c', 
+                                borderRadius: '4px',
+                                marginBottom: '4px'
+                              }} />
+                              <Text style={{ fontSize: '11px', color: '#fa541c' }}>{value.toFixed(4)}</Text>
+                            </div>
+                          )
+                        }
+                      ]}
+                      pagination={false}
+                    />
+                  </StyledCard>
+                </Col>
+
+                <Col span={24}>
+                  <Alert
+                    message="🔍 Feature Selection Recommendation"
+                    description={`Analysis shows ${correlationAnalysis.summary?.low_correlation_count} features have correlation < ${correlationAnalysis.correlation_threshold} with revenue. Removing these features will reduce model complexity by ${correlationAnalysis.summary?.removal_percentage}% and help prevent overfitting. The model will focus on the ${correlationAnalysis.summary?.high_correlation_count} most relevant features for revenue prediction.`}
+                    type="warning"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                  />
+                </Col>
+
+                <Col span={24}>
+                  <Alert
+                    message="✅ Automatic Feature Dropping"
+                    description="When you train models, features with correlation < 0.01 are automatically dropped during the feature engineering phase. This ensures optimal model performance and prevents overfitting."
+                    type="success"
                     showIcon
                   />
                 </Col>

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1000" height="600" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="500" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#2c3e50">
+    Ensemble Methods for Hotel Revenue Prediction
+  </text>
+  
+  <!-- Input Data -->
+  <rect x="80" y="80" width="160" height="60" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+  <text x="160" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1976d2">
+    Hotel Revenue Data
+  </text>
+  <text x="160" y="125" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#424242">
+    13,140+ Records
+  </text>
+  
+  <!-- Base Models -->
+  <g id="models">
+    <!-- Random Forest -->
+    <rect x="50" y="200" width="120" height="60" rx="6" fill="#e8f5e8" stroke="#4caf50" stroke-width="2"/>
+    <text x="110" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#2e7d32">
+      Random Forest
+    </text>
+    <text x="110" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#424242">
+      Individual Prediction
+    </text>
+    
+    <!-- XGBoost -->
+    <rect x="200" y="200" width="120" height="60" rx="6" fill="#fff3e0" stroke="#ff9800" stroke-width="2"/>
+    <text x="260" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#f57c00">
+      XGBoost
+    </text>
+    <text x="260" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#424242">
+      Individual Prediction
+    </text>
+    
+    <!-- LightGBM -->
+    <rect x="350" y="200" width="120" height="60" rx="6" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2"/>
+    <text x="410" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#7b1fa2">
+      LightGBM
+    </text>
+    <text x="410" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#424242">
+      Individual Prediction
+    </text>
+    
+    <!-- Ridge -->
+    <rect x="500" y="200" width="120" height="60" rx="6" fill="#e1f5fe" stroke="#03a9f4" stroke-width="2"/>
+    <text x="560" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#0277bd">
+      Ridge
+    </text>
+    <text x="560" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#424242">
+      Individual Prediction
+    </text>
+    
+    <!-- Gradient Boost -->
+    <rect x="650" y="200" width="120" height="60" rx="6" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+    <text x="710" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#c2185b">
+      Gradient Boost
+    </text>
+    <text x="710" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#424242">
+      Individual Prediction
+    </text>
+  </g>
+  
+  <!-- Arrows from data to models -->
+  <path d="M 160 140 L 110 200" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <path d="M 160 140 L 260 200" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <path d="M 160 140 L 410 200" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <path d="M 160 140 L 560 200" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <path d="M 160 140 L 710 200" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  
+  <!-- Ensemble Methods -->
+  <g id="ensemble">
+    <!-- Simple Average -->
+    <rect x="150" y="320" width="140" height="70" rx="8" fill="#fff8e1" stroke="#ffc107" stroke-width="2"/>
+    <text x="220" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#f57c00">
+      Simple Average
+    </text>
+    <text x="220" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">
+      Equal weights
+    </text>
+    
+    <!-- Weighted Average -->
+    <rect x="330" y="320" width="140" height="70" rx="8" fill="#e8f5e8" stroke="#4caf50" stroke-width="2"/>
+    <text x="400" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#2e7d32">
+      Weighted Average
+    </text>
+    <text x="400" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">
+      Performance weights
+    </text>
+    
+    <!-- Stacking -->
+    <rect x="510" y="320" width="140" height="70" rx="8" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2"/>
+    <text x="580" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#7b1fa2">
+      Stacking
+    </text>
+    <text x="580" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">
+      Meta-learner
+    </text>
+  </g>
+  
+  <!-- Arrows from models to ensemble -->
+  <path d="M 110 260 L 220 320" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <path d="M 260 260 L 300 320" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <path d="M 410 260 L 400 320" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <path d="M 560 260 L 500 320" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <path d="M 710 260 L 580 320" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  
+  <!-- Final Result -->
+  <rect x="350" y="450" width="200" height="80" rx="10" fill="#e8f5e8" stroke="#4caf50" stroke-width="3"/>
+  <text x="450" y="480" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2e7d32">
+    Best Ensemble
+  </text>
+  <text x="450" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1b5e20">
+    Combined Prediction
+  </text>
+  <text x="450" y="520" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#424242">
+    More accurate than any single model
+  </text>
+  
+  <!-- Arrow to final result -->
+  <path d="M 400 390 L 450 450" stroke="#4caf50" stroke-width="3" marker-end="url(#arrowhead-green)" fill="none"/>
+  
+  <!-- Benefits Box -->
+  <rect x="700" y="320" width="250" height="120" rx="8" fill="#e0f2f1" stroke="#009688" stroke-width="2"/>
+  <text x="825" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#00695c">
+    Why Ensemble Works
+  </text>
+  <text x="715" y="365" font-family="Arial, sans-serif" font-size="11" fill="#424242">✓ Reduces overfitting</text>
+  <text x="715" y="380" font-family="Arial, sans-serif" font-size="11" fill="#424242">✓ Captures diverse patterns</text>
+  <text x="715" y="395" font-family="Arial, sans-serif" font-size="11" fill="#424242">✓ Errors cancel out</text>
+  <text x="715" y="410" font-family="Arial, sans-serif" font-size="11" fill="#424242">✓ More robust predictions</text>
+  <text x="715" y="425" font-family="Arial, sans-serif" font-size="11" fill="#424242">✓ Better generalization</text>
+  
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+    </marker>
+    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4caf50"/>
+    </marker>
+  </defs>
+</svg> 

@@ -268,6 +268,138 @@ def demonstrate_leakage_prevention():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/feature-engineering/correlation-analysis', methods=['GET'])
+def analyze_feature_correlations():
+    """Analyze feature correlations and identify low-correlation features for removal"""
+    try:
+        logger.info("🔍 Starting feature correlation analysis...")
+        
+        # Load all revenue center data
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        logger.info(f"   📊 Loaded {df.shape[0]} records from all revenue centers")
+        
+        # Prepare features for correlation analysis
+        feature_df = df.copy()
+        
+        # Remove target column and non-predictive columns
+        target = 'CheckTotal'
+        exclude_cols = ['Date', 'RevenueCenterName', target, 'is_zero']
+        feature_cols = [col for col in feature_df.columns if col not in exclude_cols]
+        
+        # Encode categorical variables
+        label_encoders = {}
+        for col in feature_cols:
+            if feature_df[col].dtype == 'object':
+                le = LabelEncoder()
+                feature_df[col] = le.fit_transform(feature_df[col].astype(str))
+                label_encoders[col] = le
+        
+        # Prepare features and target
+        X = feature_df[feature_cols]
+        y = feature_df[target]
+        
+        # Handle any remaining NaN values
+        X = X.fillna(0)
+        y = y.fillna(0)
+        
+        # Calculate correlations
+        correlation_threshold = 0.01
+        feature_correlations = {}
+        high_correlation_features = []
+        low_correlation_features = []
+        
+        for feature in feature_cols:
+            try:
+                correlation = abs(X[feature].corr(y))
+                if not pd.isna(correlation):
+                    feature_correlations[feature] = float(correlation)
+                    if correlation >= correlation_threshold:
+                        high_correlation_features.append({
+                            'feature': feature,
+                            'correlation': float(correlation)
+                        })
+                    else:
+                        low_correlation_features.append({
+                            'feature': feature,
+                            'correlation': float(correlation)
+                        })
+                else:
+                    low_correlation_features.append({
+                        'feature': feature,
+                        'correlation': 0.0
+                    })
+            except:
+                low_correlation_features.append({
+                    'feature': feature,
+                    'correlation': 0.0
+                })
+        
+        # Sort by correlation (descending)
+        high_correlation_features.sort(key=lambda x: x['correlation'], reverse=True)
+        low_correlation_features.sort(key=lambda x: x['correlation'], reverse=True)
+        
+        # Create correlation distribution plot
+        correlations = [item['correlation'] for item in high_correlation_features + low_correlation_features]
+        
+        plt.figure(figsize=(12, 6))
+        plt.hist(correlations, bins=20, alpha=0.7, color='steelblue', edgecolor='black')
+        plt.axvline(x=correlation_threshold, color='red', linestyle='--', linewidth=2, 
+                   label=f'Threshold = {correlation_threshold}')
+        plt.xlabel('Absolute Correlation with Revenue')
+        plt.ylabel('Number of Features')
+        plt.title('Distribution of Feature Correlations with Revenue')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        correlation_plot = plot_to_base64()
+        
+        # Create feature categories
+        feature_categories = {
+            'temporal': [],
+            'events': [],
+            'operational': [],
+            'other': []
+        }
+        
+        all_features = high_correlation_features + low_correlation_features
+        for item in all_features:
+            feature = item['feature']
+            if any(word in feature.lower() for word in ['month', 'year', 'day', 'date']):
+                feature_categories['temporal'].append(item)
+            elif feature.startswith('Is') or 'event' in feature.lower():
+                feature_categories['events'].append(item)
+            elif 'center' in feature.lower() or 'meal' in feature.lower():
+                feature_categories['operational'].append(item)
+            else:
+                feature_categories['other'].append(item)
+        
+        logger.info(f"✅ Feature correlation analysis completed")
+        logger.info(f"   📈 High correlation features: {len(high_correlation_features)}")
+        logger.info(f"   📉 Low correlation features: {len(low_correlation_features)}")
+        
+        return jsonify({
+            'success': True,
+            'correlation_plot': correlation_plot,
+            'correlation_threshold': correlation_threshold,
+            'total_features': len(feature_cols),
+            'high_correlation_features': high_correlation_features,
+            'low_correlation_features': low_correlation_features,
+            'feature_categories': feature_categories,
+            'summary': {
+                'high_correlation_count': len(high_correlation_features),
+                'low_correlation_count': len(low_correlation_features),
+                'removal_percentage': round((len(low_correlation_features) / len(feature_cols)) * 100, 1)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error in feature correlation analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/feature-engineering/feature-importance', methods=['GET'])
 def analyze_feature_importance_for_revenue():
     """Analyze feature importance for predicting CheckTotal using real data"""
