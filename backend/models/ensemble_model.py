@@ -1753,35 +1753,9 @@ class HotelRevenueEnsemble:
             ax4.grid(True, alpha=0.3)
             ax4.tick_params(axis='x', rotation=45)
             
-            # Plot 5: Performance Summary by Meal Period
+            # Plot 5: Hidden subplot (Performance Summary removed)
             ax5 = axes[1, 1]
-            meal_periods = ['Breakfast', 'Lunch', 'Dinner']
-            colors = ['blue', 'green', 'purple']
-            
-            # Calculate R² for each meal period
-            meal_r2_scores = []
-            for meal in meal_periods:
-                meal_mask = time_data['MealPeriod'] == meal
-                if meal_mask.sum() > 0:
-                    actual_meal = time_data[meal_mask]['Actual']
-                    predicted_meal = time_data[meal_mask]['Predicted']
-                    r2 = r2_score(actual_meal, predicted_meal)
-                    meal_r2_scores.append(max(0, r2))  # Ensure non-negative for display
-                else:
-                    meal_r2_scores.append(0)
-            
-            bars = ax5.bar(meal_periods, meal_r2_scores, color=colors, alpha=0.7)
-            ax5.set_title('Model Performance by Meal Period (R² Score)')
-            ax5.set_xlabel('Meal Period')
-            ax5.set_ylabel('R² Score')
-            ax5.set_ylim(0, max(1, max(meal_r2_scores) * 1.1))
-            ax5.grid(True, alpha=0.3, axis='y')
-            
-            # Add value labels on bars
-            for bar, score in zip(bars, meal_r2_scores):
-                height = bar.get_height()
-                ax5.text(bar.get_x() + bar.get_width()/2., height + 0.01,
-                        f'{score:.3f}', ha='center', va='bottom')
+            ax5.set_visible(False)  # Hide this subplot
             
             # Plot 6: Meal Period Comparison (Combined View)
             ax6 = axes[1, 2]
