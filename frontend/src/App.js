@@ -113,7 +113,7 @@ const App = () => {
     setLoading(true);
     try {
       const response = await apiService.runFullDemonstration();
-      message.success('Complete demonstration pipeline executed successfully!');
+      message.success('Complete analysis pipeline executed successfully!');
       console.log('Demo results:', response.results);
     } catch (error) {
       message.error('Demo execution failed: ' + error.message);

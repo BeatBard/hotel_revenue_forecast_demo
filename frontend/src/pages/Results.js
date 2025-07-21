@@ -200,59 +200,7 @@ const Results = ({ dataLoaded }) => {
         </Col>
       </Row>
 
-      {/* University Project Summary */}
-      <Row gutter={[24, 24]}>
-        <Col span={24}>
-          <Card title="🎓 University Project Summary">
-            <Row gutter={[24, 24]}>
-              <Col xs={24} lg={12}>
-                <Alert
-                  message="Methodology Excellence"
-                  description="Demonstrated advanced ML techniques including ensemble methods, proper cross-validation, and strict data leakage prevention."
-                  type="success"
-                  icon={<CheckCircleOutlined />}
-                  style={{ marginBottom: '16px' }}
-                />
-                <Alert
-                  message="Performance Achievement"
-                  description="Achieved R² = 0.486, significantly exceeding industry standards (0.20-0.35) for revenue forecasting."
-                  type="info"
-                  icon={<TrophyOutlined />}
-                  style={{ marginBottom: '16px' }}
-                />
-                <Alert
-                  message="Technical Rigor"
-                  description="Implemented proper temporal splits, feature engineering, and ensemble strategies with comprehensive evaluation."
-                  type="warning"
-                  icon={<BarChartOutlined />}
-                />
-              </Col>
-              <Col xs={24} lg={12}>
-                <div style={{ padding: '20px', border: '2px dashed #d9d9d9', borderRadius: '8px' }}>
-                  <Title level={4}>Project Highlights</Title>
-                  <ul style={{ paddingLeft: '20px' }}>
-                    <li><strong>5 Base Models:</strong> Ridge, RandomForest, XGBoost, LightGBM, GradientBoosting</li>
-                    <li><strong>4 Ensemble Strategies:</strong> Simple, Weighted, Top-3, Median averaging</li>
-                    <li><strong>44 Engineered Features:</strong> Temporal, lag, rolling, interaction features</li>
-                    <li><strong>Zero Data Leakage:</strong> Strict temporal validation and safe feature creation</li>
-                    <li><strong>Production Ready:</strong> Complete pipeline with proper evaluation</li>
-                  </ul>
-                  
-                  <div style={{ marginTop: '20px', padding: '16px', background: '#f6ffed', borderRadius: '6px' }}>
-                    <Text strong style={{ color: '#52c41a' }}>
-                      ✅ Ready for University Presentation
-                    </Text>
-                    <br />
-                    <Text type="secondary">
-                      This demonstration showcases advanced machine learning skills suitable for academic evaluation.
-                    </Text>
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          </Card>
-        </Col>
-      </Row>
+
 
       {/* Technical Details */}
       {evaluationMetrics?.training_summary && (

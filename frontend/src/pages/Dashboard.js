@@ -59,7 +59,7 @@ const Dashboard = ({ dataLoaded, onLoadData }) => {
     }
   };
 
-  const demonstrationSteps = [
+  const workflowSteps = [
     {
       id: 'data-loading',
       title: 'Data Loading & Quality Check',
@@ -135,16 +135,16 @@ const Dashboard = ({ dataLoaded, onLoadData }) => {
         <Col span={24}>
           <StyledCard>
             <Title level={2} style={{ textAlign: 'center', marginBottom: '16px' }}>
-              🏨 Hotel Revenue Forecasting Demonstration
+              🏨 Hotel Revenue Forecasting
             </Title>
             <Paragraph style={{ textAlign: 'center', fontSize: '16px', color: '#666' }}>
-              University Project showcasing advanced machine learning techniques for hotel revenue prediction
+              Advanced machine learning system for hotel revenue prediction and analysis
             </Paragraph>
             
             {!dataLoaded && (
               <Alert
                 message="Get Started"
-                description="Click the 'Load Data' button below to begin the demonstration with sample hotel revenue data."
+                description="Click the 'Load Data' button below to start analyzing hotel revenue data."
                 type="info"
                 icon={<InfoCircleOutlined />}
                 style={{ marginTop: '20px' }}
@@ -157,7 +157,7 @@ const Dashboard = ({ dataLoaded, onLoadData }) => {
       {/* Project Highlights */}
       <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
         <Col span={24}>
-          <Title level={3}>🎯 Project Highlights</Title>
+          <Title level={3}>🎯 System Overview</Title>
         </Col>
         {projectHighlights.map((highlight, index) => (
           <Col xs={24} sm={12} lg={6} key={index}>
@@ -236,13 +236,13 @@ const Dashboard = ({ dataLoaded, onLoadData }) => {
         </Row>
       )}
 
-      {/* Demonstration Steps */}
-      <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
+              {/* Workflow Steps */}
+        <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
+          <Col span={24}>
+            <Title level={3}>🚀 Analysis Workflow</Title>
+          </Col>
         <Col span={24}>
-          <Title level={3}>🚀 Demonstration Pipeline</Title>
-        </Col>
-        <Col span={24}>
-          {demonstrationSteps.map((step, index) => (
+          {workflowSteps.map((step, index) => (
             <StepCard key={step.id}>
               <Row align="middle" gutter={[16, 16]}>
                 <Col flex="none">
