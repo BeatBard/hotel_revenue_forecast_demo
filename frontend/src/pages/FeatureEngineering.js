@@ -32,6 +32,7 @@ const FeatureEngineering = ({ dataLoaded }) => {
   const [leakageDemo, setLeakageDemo] = useState(null);
   const [featureImportance, setFeatureImportance] = useState(null);
   const [correlationAnalysis, setCorrelationAnalysis] = useState(null);
+  const [featureDropResults, setFeatureDropResults] = useState(null);
 
   const createTemporalFeatures = async () => {
     setLoading(true);
@@ -100,6 +101,20 @@ const FeatureEngineering = ({ dataLoaded }) => {
       setCorrelationAnalysis(response);
     } catch (error) {
       console.error('Failed to analyze feature correlations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const dropLowCorrelationFeatures = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.dropLowCorrelationFeatures({
+        threshold: correlationAnalysis?.correlation_threshold || 0.01
+      });
+      setFeatureDropResults(response);
+    } catch (error) {
+      console.error('Failed to drop features:', error);
     } finally {
       setLoading(false);
     }
@@ -495,16 +510,21 @@ const FeatureEngineering = ({ dataLoaded }) => {
             {correlationAnalysis && (
               <Row gutter={[24, 24]}>
                 <Col span={24}>
-                  <StyledCard title="Feature Correlation Distribution">
-                    <ImageContainer>
-                      <Image
-                        src={`data:image/png;base64,${correlationAnalysis.correlation_plot}`}
-                        alt="Feature Correlation Distribution"
-                        preview={{
-                          mask: 'Click to view full size'
-                        }}
-                      />
-                    </ImageContainer>
+                  <StyledCard title="Manual Feature Dropping">
+                    <div style={{ marginBottom: '16px' }}>
+                      <Button 
+                        style={{ backgroundColor: '#fadb14', borderColor: '#fadb14', color: '#000' }}
+                        icon={<BarChartOutlined />}
+                        onClick={dropLowCorrelationFeatures}
+                        loading={loading}
+                        disabled={!correlationAnalysis}
+                      >
+                        Drop Low Correlation Features Now
+                      </Button>
+                      <span style={{ marginLeft: '16px', color: '#666' }}>
+                        This will drop {correlationAnalysis?.summary?.low_correlation_count || 0} features with correlation &lt; {correlationAnalysis?.correlation_threshold || 0.01}
+                      </span>
+                    </div>
                   </StyledCard>
                 </Col>
 
@@ -630,16 +650,114 @@ const FeatureEngineering = ({ dataLoaded }) => {
                   />
                 </Col>
 
-                <Col span={24}>
-                  <Alert
-                    message="✅ Automatic Feature Dropping"
-                    description="When you train models, features with correlation < 0.01 are automatically dropped during the feature engineering phase. This ensures optimal model performance and prevents overfitting."
-                    type="success"
-                    showIcon
-                  />
-                </Col>
-              </Row>
-            )}
+                                 <Col span={24}>
+                   <Alert
+                     message="✅ Automatic Feature Dropping"
+                     description="When you train models, features with correlation < 0.01 are automatically dropped during the feature engineering phase. This ensures optimal model performance and prevents overfitting."
+                     type="success"
+                     showIcon
+                   />
+                 </Col>
+
+
+               </Row>
+             )}
+
+             {featureDropResults && (
+               <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+                 <Col span={24}>
+                   <StyledCard title="🗑️ Feature Dropping Results">
+                     <ImageContainer>
+                       <Image
+                         src={`data:image/png;base64,${featureDropResults.comparison_plot}`}
+                         alt="Before vs After Feature Dropping"
+                         preview={{
+                           mask: 'Click to view full size'
+                         }}
+                       />
+                     </ImageContainer>
+                   </StyledCard>
+                 </Col>
+
+                 <Col span={24}>
+                   <Row gutter={[16, 16]}>
+                     <Col span={6}>
+                       <StyledCard>
+                         <Statistic
+                           title="Original Features"
+                           value={featureDropResults.original_feature_count}
+                           valueStyle={{ color: '#fa541c' }}
+                         />
+                       </StyledCard>
+                     </Col>
+                     <Col span={6}>
+                       <StyledCard>
+                         <Statistic
+                           title="Features Dropped"
+                           value={featureDropResults.dropped_feature_count}
+                           valueStyle={{ color: '#f5222d' }}
+                         />
+                       </StyledCard>
+                     </Col>
+                     <Col span={6}>
+                       <StyledCard>
+                         <Statistic
+                           title="Features Remaining"
+                           value={featureDropResults.remaining_feature_count}
+                           valueStyle={{ color: '#52c41a' }}
+                         />
+                       </StyledCard>
+                     </Col>
+                     <Col span={6}>
+                       <StyledCard>
+                         <Statistic
+                           title="Reduction"
+                           value={featureDropResults.reduction_percentage}
+                           suffix="%"
+                           valueStyle={{ color: '#722ed1' }}
+                         />
+                       </StyledCard>
+                     </Col>
+                   </Row>
+                 </Col>
+
+                 <Col xs={24} lg={12}>
+                   <StyledCard title="Dropped Features" size="small">
+                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                       {featureDropResults.features_dropped?.map((feature, index) => (
+                         <Tag key={index} color="red" style={{ marginBottom: '4px' }}>
+                           {feature}
+                         </Tag>
+                       ))}
+                     </div>
+                   </StyledCard>
+                 </Col>
+
+                 <Col xs={24} lg={12}>
+                   <StyledCard title="Remaining Features" size="small">
+                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                       {featureDropResults.features_kept?.slice(0, 20).map((feature, index) => (
+                         <Tag key={index} color="green" style={{ marginBottom: '4px' }}>
+                           {feature}
+                         </Tag>
+                       ))}
+                       {featureDropResults.features_kept?.length > 20 && (
+                         <Tag color="default">+{featureDropResults.features_kept.length - 20} more</Tag>
+                       )}
+                     </div>
+                   </StyledCard>
+                 </Col>
+
+                 <Col span={24}>
+                   <Alert
+                     message={featureDropResults.summary?.operation}
+                     description={`${featureDropResults.summary?.impact}. ${featureDropResults.summary?.next_step}`}
+                     type="success"
+                     showIcon
+                   />
+                 </Col>
+               </Row>
+             )}
           </Card>
         </TabPane>
       </Tabs>

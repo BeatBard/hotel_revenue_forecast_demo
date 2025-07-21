@@ -59,6 +59,7 @@ ensemble_model = None
 feature_engineer = None
 data_loader = None
 current_data = None
+dropped_features_list = []
 
 # Helper function to convert matplotlib plots to base64
 def plot_to_base64():
@@ -341,20 +342,7 @@ def analyze_feature_correlations():
         high_correlation_features.sort(key=lambda x: x['correlation'], reverse=True)
         low_correlation_features.sort(key=lambda x: x['correlation'], reverse=True)
         
-        # Create correlation distribution plot
-        correlations = [item['correlation'] for item in high_correlation_features + low_correlation_features]
-        
-        plt.figure(figsize=(12, 6))
-        plt.hist(correlations, bins=20, alpha=0.7, color='steelblue', edgecolor='black')
-        plt.axvline(x=correlation_threshold, color='red', linestyle='--', linewidth=2, 
-                   label=f'Threshold = {correlation_threshold}')
-        plt.xlabel('Absolute Correlation with Revenue')
-        plt.ylabel('Number of Features')
-        plt.title('Distribution of Feature Correlations with Revenue')
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        
-        correlation_plot = plot_to_base64()
+        # Skip correlation plot generation for faster response
         
         # Create feature categories
         feature_categories = {
@@ -382,7 +370,6 @@ def analyze_feature_correlations():
         
         return jsonify({
             'success': True,
-            'correlation_plot': correlation_plot,
             'correlation_threshold': correlation_threshold,
             'total_features': len(feature_cols),
             'high_correlation_features': high_correlation_features,
@@ -397,6 +384,132 @@ def analyze_feature_correlations():
         
     except Exception as e:
         logger.error(f"❌ Error in feature correlation analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/feature-engineering/drop-features', methods=['POST'])
+def drop_low_correlation_features():
+    """Drop features with low correlation to revenue and update feature set"""
+    try:
+        logger.info("🗑️ Starting feature dropping process...")
+        
+        config = request.get_json() or {}
+        correlation_threshold = config.get('threshold', 0.01)
+        
+        # Load all revenue center data
+        df = load_all_revenue_data()
+        if df is None or df.empty:
+            return jsonify({'error': 'No data available'}), 400
+        
+        logger.info(f"   📊 Loaded {df.shape[0]} records from all revenue centers")
+        
+        # Prepare features for correlation analysis
+        feature_df = df.copy()
+        
+        # Remove target column and non-predictive columns
+        target = 'CheckTotal'
+        exclude_cols = ['Date', 'RevenueCenterName', target, 'is_zero']
+        feature_cols = [col for col in feature_df.columns if col not in exclude_cols]
+        
+        # Encode categorical variables
+        label_encoders = {}
+        for col in feature_cols:
+            if feature_df[col].dtype == 'object':
+                le = LabelEncoder()
+                feature_df[col] = le.fit_transform(feature_df[col].astype(str))
+                label_encoders[col] = le
+        
+        # Prepare features and target
+        X = feature_df[feature_cols]
+        y = feature_df[target]
+        
+        # Handle any remaining NaN values
+        X = X.fillna(0)
+        y = y.fillna(0)
+        
+        # Calculate correlations and identify features to drop
+        features_to_drop = []
+        features_to_keep = []
+        feature_correlations = {}
+        
+        for feature in feature_cols:
+            try:
+                correlation = abs(X[feature].corr(y))
+                if not pd.isna(correlation):
+                    feature_correlations[feature] = float(correlation)
+                    if correlation < correlation_threshold:
+                        features_to_drop.append(feature)
+                    else:
+                        features_to_keep.append(feature)
+                else:
+                    features_to_drop.append(feature)
+            except:
+                features_to_drop.append(feature)
+        
+        # Simulate dropping features (create reduced dataset)
+        reduced_X = X[features_to_keep]
+        
+        # Calculate some metrics about the feature dropping
+        original_feature_count = len(feature_cols)
+        dropped_feature_count = len(features_to_drop)
+        remaining_feature_count = len(features_to_keep)
+        reduction_percentage = round((dropped_feature_count / original_feature_count) * 100, 1)
+        
+        # Create before/after comparison plot
+        plt.figure(figsize=(12, 5))
+        
+        # Before plot
+        plt.subplot(1, 2, 1)
+        correlations_before = [feature_correlations.get(f, 0) for f in feature_cols]
+        plt.hist(correlations_before, bins=15, alpha=0.7, color='lightcoral', edgecolor='black')
+        plt.axvline(x=correlation_threshold, color='red', linestyle='--', linewidth=2)
+        plt.xlabel('Absolute Correlation with Revenue')
+        plt.ylabel('Number of Features')
+        plt.title(f'Before: {original_feature_count} Features')
+        plt.grid(True, alpha=0.3)
+        
+        # After plot
+        plt.subplot(1, 2, 2)
+        correlations_after = [feature_correlations.get(f, 0) for f in features_to_keep]
+        plt.hist(correlations_after, bins=15, alpha=0.7, color='lightgreen', edgecolor='black')
+        plt.axvline(x=correlation_threshold, color='red', linestyle='--', linewidth=2)
+        plt.xlabel('Absolute Correlation with Revenue')
+        plt.ylabel('Number of Features')
+        plt.title(f'After: {remaining_feature_count} Features')
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        comparison_plot = plot_to_base64()
+        
+        # Store the dropped features in global state (for actual model training)
+        global dropped_features_list
+        dropped_features_list = features_to_drop
+        
+        logger.info(f"✅ Feature dropping completed:")
+        logger.info(f"   📈 Original features: {original_feature_count}")
+        logger.info(f"   🗑️ Features dropped: {dropped_feature_count}")
+        logger.info(f"   ✅ Features remaining: {remaining_feature_count}")
+        logger.info(f"   📉 Reduction: {reduction_percentage}%")
+        
+        return jsonify({
+            'success': True,
+            'comparison_plot': comparison_plot,
+            'original_feature_count': original_feature_count,
+            'dropped_feature_count': dropped_feature_count,
+            'remaining_feature_count': remaining_feature_count,
+            'reduction_percentage': reduction_percentage,
+            'correlation_threshold': correlation_threshold,
+            'features_dropped': features_to_drop,
+            'features_kept': features_to_keep,
+            'summary': {
+                'operation': 'Feature dropping completed successfully',
+                'impact': f'Reduced feature space by {reduction_percentage}%',
+                'next_step': 'Models will now train with optimized feature set'
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error dropping features: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 

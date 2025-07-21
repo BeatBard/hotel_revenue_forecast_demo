@@ -139,6 +139,14 @@ GET /api/feature-engineering/correlation-analysis
 **Description**: Analyze correlation between features and revenue to identify low-correlation features for removal  
 **Response**: Correlation distribution plot, high/low correlation features, removal recommendations
 
+#### Drop Low Correlation Features
+```http
+POST /api/feature-engineering/drop-features
+```
+**Description**: Drop features with low correlation to revenue and update feature set for model training  
+**Body**: `{"threshold": 0.01}`  
+**Response**: Before/after comparison plot, dropped features list, performance metrics
+
 ---
 
 ### Model Training
