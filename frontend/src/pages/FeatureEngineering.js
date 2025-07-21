@@ -285,74 +285,7 @@ const FeatureEngineering = ({ dataLoaded }) => {
           </Card>
         </TabPane>
 
-        <TabPane tab="Leakage Prevention" key="leakage">
-          <Card>
-            <div style={{ marginBottom: '16px' }}>
-              <Button 
-                type="primary" 
-                icon={<SafetyOutlined />}
-                onClick={demonstrateLeakagePrevention}
-                loading={loading}
-                danger
-              >
-                Demonstrate Leakage Prevention
-              </Button>
-            </div>
-            
-            {leakageDemo && (
-              <Row gutter={[24, 24]}>
-                <Col xs={24} lg={12}>
-                  <Card title="🚨 Leaky Examples (DON'T DO THIS)" size="small">
-                    {Object.entries(leakageDemo.leaky_examples || {}).map(([feature, info]) => (
-                      <div key={feature} style={{ marginBottom: '16px' }}>
-                        <Text strong style={{ color: '#ff4d4f' }}>{feature}</Text>
-                        <p>Correlation: {info.correlation_with_target?.toFixed(3)}</p>
-                        <p style={{ fontSize: '12px', color: '#666' }}>{info.why_leaky}</p>
-                        <Tag color="red">{info.red_flag}</Tag>
-                      </div>
-                    ))}
-                  </Card>
-                </Col>
-                <Col xs={24} lg={12}>
-                  <Card title="✅ Safe Examples (CORRECT WAY)" size="small">
-                    {Object.entries(leakageDemo.safe_examples || {}).map(([feature, info]) => (
-                      <div key={feature} style={{ marginBottom: '16px' }}>
-                        <Text strong style={{ color: '#52c41a' }}>{feature}</Text>
-                        <p>Correlation: {info.correlation_with_target?.toFixed(3)}</p>
-                        <p style={{ fontSize: '12px', color: '#666' }}>{info.why_safe}</p>
-                        <Tag color="green">{info.validation}</Tag>
-                      </div>
-                    ))}
-                  </Card>
-                </Col>
-                <Col span={24}>
-                  <Card title="Prevention Techniques" size="small">
-                    <Row gutter={[16, 16]}>
-                      {Object.entries(leakageDemo.prevention_techniques || {}).map(([technique, description]) => (
-                        <Col xs={24} sm={12} key={technique}>
-                          <div style={{ padding: '8px', border: '1px solid #d9d9d9', borderRadius: '4px' }}>
-                            <Text strong>{technique.replace(/_/g, ' ').toUpperCase()}</Text>
-                            <p style={{ fontSize: '12px', margin: '4px 0 0 0' }}>{description}</p>
-                          </div>
-                        </Col>
-                      ))}
-                    </Row>
-                  </Card>
-                </Col>
-                <Col span={24}>
-                  <Alert
-                    message="🛡️ Data Leakage Prevention is Critical"
-                    description="Proper feature engineering ensures models learn realistic patterns that will generalize to new data, not artifacts from seeing the future."
-                    type="warning"
-                    showIcon
-                  />
-                </Col>
-              </Row>
-            )}
-          </Card>
-        </TabPane>
-
-        <TabPane tab={<span><BarChartOutlined />Feature Importance</span>} key="importance">
+        <TabPane tab={<span>📊 Feature Analysis & Importance</span>} key="analysis">
           <Card>
             <div style={{ marginBottom: '16px' }}>
               <Button 
@@ -360,10 +293,204 @@ const FeatureEngineering = ({ dataLoaded }) => {
                 icon={<BarChartOutlined />}
                 onClick={analyzeFeatureImportance}
                 loading={loading}
+                style={{ marginRight: '16px' }}
               >
-                Analyze Feature Importance for Revenue Prediction
+                Analyze Feature Importance
+              </Button>
+              <Button 
+                type="primary" 
+                icon={<BarChartOutlined />}
+                onClick={analyzeFeatureCorrelations}
+                loading={loading}
+              >
+                Analyze Feature Correlations
               </Button>
             </div>
+
+            {correlationAnalysis && (
+              <div style={{ marginBottom: '24px' }}>
+                <StyledCard title="Feature Correlation Analysis">
+                  <Row gutter={[24, 24]}>
+                    <Col span={24}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <Button 
+                          style={{ backgroundColor: '#fadb14', borderColor: '#fadb14', color: '#000' }}
+                          icon={<BarChartOutlined />}
+                          onClick={dropLowCorrelationFeatures}
+                          loading={loading}
+                          disabled={!correlationAnalysis}
+                        >
+                          Drop Low Correlation Features Now
+                        </Button>
+                        <span style={{ marginLeft: '16px', color: '#666' }}>
+                          This will drop {correlationAnalysis?.summary?.low_correlation_count || 0} features with correlation &lt; {correlationAnalysis?.correlation_threshold || 0.01}
+                        </span>
+                      </div>
+                    </Col>
+
+                    <Col span={24}>
+                      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col span={6}>
+                          <StyledCard>
+                            <Statistic
+                              title="Total Features"
+                              value={correlationAnalysis.total_features}
+                              valueStyle={{ color: '#1890ff' }}
+                            />
+                          </StyledCard>
+                        </Col>
+                        <Col span={6}>
+                          <StyledCard>
+                            <Statistic
+                              title="High Correlation Features"
+                              value={correlationAnalysis.summary?.high_correlation_count}
+                              valueStyle={{ color: '#52c41a' }}
+                            />
+                          </StyledCard>
+                        </Col>
+                        <Col span={6}>
+                          <StyledCard>
+                            <Statistic
+                              title="Low Correlation Features"
+                              value={correlationAnalysis.summary?.low_correlation_count}
+                              valueStyle={{ color: '#fa541c' }}
+                            />
+                          </StyledCard>
+                        </Col>
+                        <Col span={6}>
+                          <StyledCard>
+                            <Statistic
+                              title="Removal Percentage"
+                              value={correlationAnalysis.summary?.removal_percentage}
+                              suffix="%"
+                              valueStyle={{ color: '#722ed1' }}
+                            />
+                          </StyledCard>
+                        </Col>
+                      </Row>
+                    </Col>
+
+                    <Col xs={24} lg={12}>
+                      <StyledCard title="Features to Keep (High Correlation)" size="small">
+                        <Table
+                          size="small"
+                          dataSource={correlationAnalysis.high_correlation_features?.slice(0, 10).map((item, index) => ({
+                            key: index,
+                            rank: index + 1,
+                            feature: item.feature,
+                            correlation: item.correlation
+                          }))}
+                          columns={[
+                            { title: 'Rank', dataIndex: 'rank', key: 'rank', width: 60 },
+                            { title: 'Feature', dataIndex: 'feature', key: 'feature' },
+                            { 
+                              title: 'Correlation', 
+                              dataIndex: 'correlation', 
+                              key: 'correlation',
+                              render: (value) => (
+                                <div>
+                                  <div style={{ 
+                                    width: `${value * 300}px`, 
+                                    height: '8px', 
+                                    backgroundColor: '#52c41a', 
+                                    borderRadius: '4px',
+                                    marginBottom: '4px'
+                                  }} />
+                                  <Text style={{ fontSize: '11px' }}>{value.toFixed(4)}</Text>
+                                </div>
+                              )
+                            }
+                          ]}
+                          pagination={false}
+                        />
+                      </StyledCard>
+                    </Col>
+
+                    <Col xs={24} lg={12}>
+                      <StyledCard title="Features to Drop (Low Correlation)" size="small">
+                        <Table
+                          size="small"
+                          dataSource={correlationAnalysis.low_correlation_features?.slice(0, 10).map((item, index) => ({
+                            key: index,
+                            feature: item.feature,
+                            correlation: item.correlation
+                          }))}
+                          columns={[
+                            { title: 'Feature', dataIndex: 'feature', key: 'feature' },
+                            { 
+                              title: 'Correlation', 
+                              dataIndex: 'correlation', 
+                              key: 'correlation',
+                              render: (value) => (
+                                <div>
+                                  <div style={{ 
+                                    width: `${value * 300}px`, 
+                                    height: '8px', 
+                                    backgroundColor: '#fa541c', 
+                                    borderRadius: '4px',
+                                    marginBottom: '4px'
+                                  }} />
+                                  <Text style={{ fontSize: '11px', color: '#fa541c' }}>{value.toFixed(4)}</Text>
+                                </div>
+                              )
+                            }
+                          ]}
+                          pagination={false}
+                        />
+                      </StyledCard>
+                    </Col>
+
+                    <Col span={24}>
+                      <Alert
+                        message="🔍 Feature Selection Recommendation"
+                        description={`Analysis shows ${correlationAnalysis.summary?.low_correlation_count} features have correlation < ${correlationAnalysis.correlation_threshold} with revenue. Removing these features will reduce model complexity by ${correlationAnalysis.summary?.removal_percentage}% and help prevent overfitting.`}
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                      />
+                    </Col>
+
+                    {featureDropResults && (
+                      <Col span={24}>
+                        <StyledCard title="🗑️ Feature Dropping Results" style={{ marginTop: 16 }}>
+                          <Row gutter={[16, 16]}>
+                            <Col span={6}>
+                              <Statistic
+                                title="Original Features"
+                                value={featureDropResults.original_feature_count}
+                                valueStyle={{ color: '#fa541c' }}
+                              />
+                            </Col>
+                            <Col span={6}>
+                              <Statistic
+                                title="Features Dropped"
+                                value={featureDropResults.dropped_feature_count}
+                                valueStyle={{ color: '#f5222d' }}
+                              />
+                            </Col>
+                            <Col span={6}>
+                              <Statistic
+                                title="Features Remaining"
+                                value={featureDropResults.remaining_feature_count}
+                                valueStyle={{ color: '#52c41a' }}
+                              />
+                            </Col>
+                            <Col span={6}>
+                              <Statistic
+                                title="Reduction"
+                                value={featureDropResults.reduction_percentage}
+                                suffix="%"
+                                valueStyle={{ color: '#722ed1' }}
+                              />
+                            </Col>
+                          </Row>
+                        </StyledCard>
+                      </Col>
+                    )}
+                  </Row>
+                </StyledCard>
+              </div>
+            )}
             
             {featureImportance && (
               <Row gutter={[24, 24]}>
@@ -491,273 +618,6 @@ const FeatureEngineering = ({ dataLoaded }) => {
                 </Col>
               </Row>
             )}
-          </Card>
-        </TabPane>
-
-        <TabPane tab={<span>📊 Feature Correlation</span>} key="correlation">
-          <Card>
-            <div style={{ marginBottom: '16px' }}>
-              <Button 
-                type="primary" 
-                icon={<BarChartOutlined />}
-                onClick={analyzeFeatureCorrelations}
-                loading={loading}
-              >
-                Analyze Feature Correlations with Revenue
-              </Button>
-            </div>
-            
-            {correlationAnalysis && (
-              <Row gutter={[24, 24]}>
-                <Col span={24}>
-                  <StyledCard title="Manual Feature Dropping">
-                    <div style={{ marginBottom: '16px' }}>
-                      <Button 
-                        style={{ backgroundColor: '#fadb14', borderColor: '#fadb14', color: '#000' }}
-                        icon={<BarChartOutlined />}
-                        onClick={dropLowCorrelationFeatures}
-                        loading={loading}
-                        disabled={!correlationAnalysis}
-                      >
-                        Drop Low Correlation Features Now
-                      </Button>
-                      <span style={{ marginLeft: '16px', color: '#666' }}>
-                        This will drop {correlationAnalysis?.summary?.low_correlation_count || 0} features with correlation &lt; {correlationAnalysis?.correlation_threshold || 0.01}
-                      </span>
-                    </div>
-                  </StyledCard>
-                </Col>
-
-                <Col span={24}>
-                  <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                    <Col span={6}>
-                      <StyledCard>
-                        <Statistic
-                          title="Total Features"
-                          value={correlationAnalysis.total_features}
-                          valueStyle={{ color: '#1890ff' }}
-                        />
-                      </StyledCard>
-                    </Col>
-                    <Col span={6}>
-                      <StyledCard>
-                        <Statistic
-                          title="High Correlation Features"
-                          value={correlationAnalysis.summary?.high_correlation_count}
-                          valueStyle={{ color: '#52c41a' }}
-                        />
-                      </StyledCard>
-                    </Col>
-                    <Col span={6}>
-                      <StyledCard>
-                        <Statistic
-                          title="Low Correlation Features"
-                          value={correlationAnalysis.summary?.low_correlation_count}
-                          valueStyle={{ color: '#fa541c' }}
-                        />
-                      </StyledCard>
-                    </Col>
-                    <Col span={6}>
-                      <StyledCard>
-                        <Statistic
-                          title="Removal Percentage"
-                          value={correlationAnalysis.summary?.removal_percentage}
-                          suffix="%"
-                          valueStyle={{ color: '#722ed1' }}
-                        />
-                      </StyledCard>
-                    </Col>
-                  </Row>
-                </Col>
-
-                <Col xs={24} lg={12}>
-                  <StyledCard title="Features to Keep (High Correlation)">
-                    <Table
-                      size="small"
-                      dataSource={correlationAnalysis.high_correlation_features?.slice(0, 10).map((item, index) => ({
-                        key: index,
-                        rank: index + 1,
-                        feature: item.feature,
-                        correlation: item.correlation
-                      }))}
-                      columns={[
-                        { title: 'Rank', dataIndex: 'rank', key: 'rank', width: 60 },
-                        { title: 'Feature', dataIndex: 'feature', key: 'feature' },
-                        { 
-                          title: 'Correlation', 
-                          dataIndex: 'correlation', 
-                          key: 'correlation',
-                          render: (value) => (
-                            <div>
-                              <div style={{ 
-                                width: `${value * 500}px`, 
-                                height: '8px', 
-                                backgroundColor: '#52c41a', 
-                                borderRadius: '4px',
-                                marginBottom: '4px'
-                              }} />
-                              <Text style={{ fontSize: '11px' }}>{value.toFixed(4)}</Text>
-                            </div>
-                          )
-                        }
-                      ]}
-                      pagination={false}
-                    />
-                  </StyledCard>
-                </Col>
-
-                <Col xs={24} lg={12}>
-                  <StyledCard title="Features to Drop (Low Correlation)">
-                    <Table
-                      size="small"
-                      dataSource={correlationAnalysis.low_correlation_features?.slice(0, 10).map((item, index) => ({
-                        key: index,
-                        feature: item.feature,
-                        correlation: item.correlation
-                      }))}
-                      columns={[
-                        { title: 'Feature', dataIndex: 'feature', key: 'feature' },
-                        { 
-                          title: 'Correlation', 
-                          dataIndex: 'correlation', 
-                          key: 'correlation',
-                          render: (value) => (
-                            <div>
-                              <div style={{ 
-                                width: `${value * 500}px`, 
-                                height: '8px', 
-                                backgroundColor: '#fa541c', 
-                                borderRadius: '4px',
-                                marginBottom: '4px'
-                              }} />
-                              <Text style={{ fontSize: '11px', color: '#fa541c' }}>{value.toFixed(4)}</Text>
-                            </div>
-                          )
-                        }
-                      ]}
-                      pagination={false}
-                    />
-                  </StyledCard>
-                </Col>
-
-                <Col span={24}>
-                  <Alert
-                    message="🔍 Feature Selection Recommendation"
-                    description={`Analysis shows ${correlationAnalysis.summary?.low_correlation_count} features have correlation < ${correlationAnalysis.correlation_threshold} with revenue. Removing these features will reduce model complexity by ${correlationAnalysis.summary?.removal_percentage}% and help prevent overfitting. The model will focus on the ${correlationAnalysis.summary?.high_correlation_count} most relevant features for revenue prediction.`}
-                    type="warning"
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                  />
-                </Col>
-
-                                 <Col span={24}>
-                   <Alert
-                     message="✅ Automatic Feature Dropping"
-                     description="When you train models, features with correlation < 0.01 are automatically dropped during the feature engineering phase. This ensures optimal model performance and prevents overfitting."
-                     type="success"
-                     showIcon
-                   />
-                 </Col>
-
-
-               </Row>
-             )}
-
-             {featureDropResults && (
-               <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-                 <Col span={24}>
-                   <StyledCard title="🗑️ Feature Dropping Results">
-                     <ImageContainer>
-                       <Image
-                         src={`data:image/png;base64,${featureDropResults.comparison_plot}`}
-                         alt="Before vs After Feature Dropping"
-                         preview={{
-                           mask: 'Click to view full size'
-                         }}
-                       />
-                     </ImageContainer>
-                   </StyledCard>
-                 </Col>
-
-                 <Col span={24}>
-                   <Row gutter={[16, 16]}>
-                     <Col span={6}>
-                       <StyledCard>
-                         <Statistic
-                           title="Original Features"
-                           value={featureDropResults.original_feature_count}
-                           valueStyle={{ color: '#fa541c' }}
-                         />
-                       </StyledCard>
-                     </Col>
-                     <Col span={6}>
-                       <StyledCard>
-                         <Statistic
-                           title="Features Dropped"
-                           value={featureDropResults.dropped_feature_count}
-                           valueStyle={{ color: '#f5222d' }}
-                         />
-                       </StyledCard>
-                     </Col>
-                     <Col span={6}>
-                       <StyledCard>
-                         <Statistic
-                           title="Features Remaining"
-                           value={featureDropResults.remaining_feature_count}
-                           valueStyle={{ color: '#52c41a' }}
-                         />
-                       </StyledCard>
-                     </Col>
-                     <Col span={6}>
-                       <StyledCard>
-                         <Statistic
-                           title="Reduction"
-                           value={featureDropResults.reduction_percentage}
-                           suffix="%"
-                           valueStyle={{ color: '#722ed1' }}
-                         />
-                       </StyledCard>
-                     </Col>
-                   </Row>
-                 </Col>
-
-                 <Col xs={24} lg={12}>
-                   <StyledCard title="Dropped Features" size="small">
-                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                       {featureDropResults.features_dropped?.map((feature, index) => (
-                         <Tag key={index} color="red" style={{ marginBottom: '4px' }}>
-                           {feature}
-                         </Tag>
-                       ))}
-                     </div>
-                   </StyledCard>
-                 </Col>
-
-                 <Col xs={24} lg={12}>
-                   <StyledCard title="Remaining Features" size="small">
-                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                       {featureDropResults.features_kept?.slice(0, 20).map((feature, index) => (
-                         <Tag key={index} color="green" style={{ marginBottom: '4px' }}>
-                           {feature}
-                         </Tag>
-                       ))}
-                       {featureDropResults.features_kept?.length > 20 && (
-                         <Tag color="default">+{featureDropResults.features_kept.length - 20} more</Tag>
-                       )}
-                     </div>
-                   </StyledCard>
-                 </Col>
-
-                 <Col span={24}>
-                   <Alert
-                     message={featureDropResults.summary?.operation}
-                     description={`${featureDropResults.summary?.impact}. ${featureDropResults.summary?.next_step}`}
-                     type="success"
-                     showIcon
-                   />
-                 </Col>
-               </Row>
-             )}
           </Card>
         </TabPane>
       </Tabs>
