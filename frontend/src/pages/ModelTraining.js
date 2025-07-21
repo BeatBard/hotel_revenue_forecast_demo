@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Row, Col, Button, Typography, Alert, Tabs, Progress, List, Tag, Statistic, message } from 'antd';
-import { RobotOutlined, ThunderboltOutlined, TrophyOutlined } from '@ant-design/icons';
+import { RobotOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { apiService } from '../services/apiService';
 
 const { Title, Paragraph, Text } = Typography;
@@ -10,7 +10,6 @@ const ModelTraining = ({ dataLoaded }) => {
   const [loading, setLoading] = useState(false);
   const [individualResults, setIndividualResults] = useState(null);
   const [ensembleResults, setEnsembleResults] = useState(null);
-  const [featureImportance, setFeatureImportance] = useState(null);
 
   const trainIndividualModels = async () => {
     setLoading(true);
@@ -40,25 +39,7 @@ const ModelTraining = ({ dataLoaded }) => {
     }
   };
 
-  const loadFeatureImportance = async (model = 'xgboost') => {
-    try {
-      const response = await apiService.getModelFeatureImportance(model);
-      
-      // Check if there's an error in the response
-      if (response.error) {
-        message.error(`Feature Importance Error: ${response.error}`);
-        setFeatureImportance(null);
-        return;
-      }
-      
-      setFeatureImportance(response);
-      message.success(`Feature importance loaded for ${model.toUpperCase()}`);
-    } catch (error) {
-      console.error('Failed to load feature importance:', error);
-      message.error('Failed to load feature importance. Please ensure models are trained first.');
-      setFeatureImportance(null);
-    }
-  };
+
 
   const getPerformanceColor = (r2) => {
     if (r2 > 0.4) return '#52c41a'; // Green
@@ -305,57 +286,7 @@ const ModelTraining = ({ dataLoaded }) => {
           </Card>
         </TabPane>
 
-        <TabPane tab="Feature Importance" key="importance">
-          <Card>
-            {!individualResults && (
-              <Alert
-                message="Models Required"
-                description="Please train individual models first to analyze feature importance."
-                type="info"
-                style={{ marginBottom: '16px' }}
-                showIcon
-              />
-            )}
-            <div style={{ marginBottom: '16px' }}>
-              <Button 
-                type="primary" 
-                icon={<TrophyOutlined />}
-                onClick={() => loadFeatureImportance('xgboost')}
-                loading={loading}
-                disabled={!individualResults}
-              >
-                Analyze Feature Importance
-              </Button>
-            </div>
-            
-            {featureImportance && (
-              <Row gutter={[24, 24]}>
-                <Col span={24}>
-                  <Card title="Top 10 Most Important Features" size="small">
-                    <List
-                      dataSource={featureImportance.sorted_features?.slice(0, 10)}
-                      renderItem={([feature, importance], index) => (
-                        <List.Item>
-                          <div style={{ width: '100%' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text strong>{index + 1}. {feature}</Text>
-                              <Text>{importance.toFixed(4)}</Text>
-                            </div>
-                            <Progress 
-                              percent={(importance * 100 / featureImportance.sorted_features[0][1]).toFixed(1)} 
-                              size="small"
-                              showInfo={false}
-                            />
-                          </div>
-                        </List.Item>
-                      )}
-                    />
-                  </Card>
-                </Col>
-              </Row>
-            )}
-          </Card>
-        </TabPane>
+
       </Tabs>
     </div>
   );
