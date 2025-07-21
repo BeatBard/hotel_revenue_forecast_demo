@@ -29,7 +29,7 @@ class FeatureEngineer:
         df['Date'] = pd.to_datetime(df['Date'])
         
         # Basic temporal features
-        df['Year'] = df['Date'].dt.year
+        # df['Year'] = df['Date'].dt.year
         df['Month'] = df['Date'].dt.month
         df['Day'] = df['Date'].dt.day
         df['DayOfWeek'] = df['Date'].dt.dayofweek
@@ -66,7 +66,7 @@ class FeatureEngineer:
         
         feature_info = {
             'features_created': [
-                'Year', 'Month', 'Day', 'DayOfWeek', 'DayOfYear', 
+                'Month', 'Day', 'DayOfWeek', 'DayOfYear', 
                 'WeekOfYear', 'Quarter', 'Month_sin', 'Month_cos',
                 'DayOfWeek_sin', 'DayOfWeek_cos', 'DayOfYear_sin', 
                 'DayOfYear_cos', 'IsWeekend', 'Season', 'MealPeriod_encoded',

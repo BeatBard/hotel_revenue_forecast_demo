@@ -288,9 +288,9 @@ class HotelRevenueEnsemble:
             df = df.sort_values(['Date', 'MealPeriod']).reset_index(drop=True)
             
             # Ensure proper data types and handle missing values
-            numeric_columns = ['DayOfWeek', 'Month', 'Year', 'CheckTotal', 'is_zero',
+            numeric_columns = ['DayOfWeek', 'Month', 'CheckTotal', 'is_zero',
                              'IsRamadan', 'IsEid', 'IsPreRamadan', 'IsPostRamadan', 'IsLast10Ramadan',
-                             'IsDSF', 'IsSummerEvent', 'IsWorldCup', 'IsNationalDay', 'IsNewYear', 
+                             'IsDSF', 'IsSummerEvent', 'IsWorldCup', 'IsNationalDay', 'IsNewYear',
                              'IsMarathon', 'IsGITEX', 'IsFilmFestival', 'IsAirshow', 'IsArtDubai', 
                              'IsFoodFestival', 'IsPreEvent', 'IsPostEvent']
             
@@ -298,7 +298,7 @@ class HotelRevenueEnsemble:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
                     # Fill NaN values with appropriate defaults
-                    if col in ['DayOfWeek', 'Month', 'Year']:
+                    if col in ['DayOfWeek', 'Month']:
                         df[col] = df[col].fillna(0)  # Temporal columns
                     elif col == 'CheckTotal':
                         df[col] = df[col].fillna(0)  # Revenue column
@@ -307,8 +307,8 @@ class HotelRevenueEnsemble:
             
             # Use existing temporal features from dataset when available
             # Only create additional temporal features if they don't exist
-            if 'Year' not in df.columns:
-                df['Year'] = df['Date'].dt.year.astype('int32')
+            # if 'Year' not in df.columns:
+            #     df['Year'] = df['Date'].dt.year.astype('int32')
             if 'Month' not in df.columns:
                 df['Month'] = df['Date'].dt.month.astype('int32')
             if 'DayOfWeek' not in df.columns:
@@ -430,6 +430,7 @@ class HotelRevenueEnsemble:
         
         for feature in common_features:
             try:
+                # Compute absolute Pearson correlation between feature and target
                 correlation = abs(X_temp[feature].corr(y_temp))
                 if not pd.isna(correlation):
                     feature_correlations[feature] = correlation

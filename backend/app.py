@@ -288,7 +288,7 @@ def analyze_feature_correlations():
         # Remove target column and non-predictive columns
         target = 'CheckTotal'
         exclude_cols = ['Date', 'RevenueCenterName', target, 'is_zero']
-        feature_cols = [col for col in feature_df.columns if col not in exclude_cols]
+        feature_cols = [col for col in feature_df.columns if col not in exclude_cols and 'year' not in col.lower()]
         
         # Encode categorical variables
         label_encoders = {}
@@ -342,9 +342,10 @@ def analyze_feature_correlations():
         high_correlation_features.sort(key=lambda x: x['correlation'], reverse=True)
         low_correlation_features.sort(key=lambda x: x['correlation'], reverse=True)
         
-        # Skip correlation plot generation for faster response
-        
-        # Create feature categories
+        # After calculating high_correlation_features and low_correlation_features, filter out any with 'year' in the name
+        high_correlation_features = [f for f in high_correlation_features if 'year' not in f['feature'].lower()]
+        low_correlation_features = [f for f in low_correlation_features if 'year' not in f['feature'].lower()]
+        # Also remove from feature_categories
         feature_categories = {
             'temporal': [],
             'events': [],
@@ -355,7 +356,7 @@ def analyze_feature_correlations():
         all_features = high_correlation_features + low_correlation_features
         for item in all_features:
             feature = item['feature']
-            if any(word in feature.lower() for word in ['month', 'year', 'day', 'date']):
+            if any(word in feature.lower() for word in ['month', 'day', 'date']):
                 feature_categories['temporal'].append(item)
             elif feature.startswith('Is') or 'event' in feature.lower():
                 feature_categories['events'].append(item)

@@ -306,7 +306,7 @@ const FeatureEngineering = ({ dataLoaded }) => {
                 Analyze Feature Correlations
               </Button>
             </div>
-
+            
             {correlationAnalysis && (
               <div style={{ marginBottom: '24px' }}>
                 <StyledCard title="Feature Correlation Analysis">
@@ -577,7 +577,7 @@ const FeatureEngineering = ({ dataLoaded }) => {
                                 marginBottom: '4px'
                               }} />
                               <Text style={{ fontSize: '11px' }}>{value.toFixed(4)}</Text>
-                            </div>
+                      </div>
                           )
                         }
                       ]}
@@ -604,7 +604,7 @@ const FeatureEngineering = ({ dataLoaded }) => {
                           </div>
                         </div>
                       )
-                    ))}
+                      ))}
                   </StyledCard>
                 </Col>
 
